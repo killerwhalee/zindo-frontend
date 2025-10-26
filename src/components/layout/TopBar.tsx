@@ -1,0 +1,14 @@
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
+
+export default function TopBar({ title }: { title: string }) {
+	const navigate = useNavigate();
+	return (
+		<div className="flex items-center gap-3 p-4 border-b">
+			<button onClick={() => navigate(-1)}>
+				<ArrowLeft className="w-5 h-5" />
+			</button>
+			<h1 className="text-lg font-semibold">{title}</h1>
+		</div>
+	);
+}
