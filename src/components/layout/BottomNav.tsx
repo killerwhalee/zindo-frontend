@@ -9,7 +9,7 @@ export default function BottomNav() {
 				className="flex flex-col items-center text-sm"
 			>
 				<Home className="w-5 h-5" />
-				<span>Home</span>
+				<span>홈</span>
 			</Link>
 		</div>
 	);

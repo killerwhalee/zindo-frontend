@@ -1,24 +1,52 @@
-// src/pages/Students/StudentList.tsx
 import { Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
+import {
+	Card,
+	CardAction,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
-import { students } from '@/lib/dummyData';
+import type { Student } from '@/components/types';
 
 export default function StudentList() {
+	const [students, setStudents] = useState<Student[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		api
+			.get('/zindo/students/')
+			.then((res) => setStudents(res.data))
+			.catch((err) => console.error('Failed to fetch students:', err))
+			.finally(() => setLoading(false));
+	}, []);
+
+	if (loading) return <div className="p-4 text-center">Loading...</div>;
+
 	return (
-		<div className="pb-16">
-			<TopBar title="Students" />
+		<div className="pt-16">
+			<TopBar title="아동 목록" />
 			<div className="p-4 space-y-3">
 				{students.map((student) => (
-					<Card className="hover:bg-accent transition-colors">
-						<CardContent className="p-4">
-							<Link
-								key={student.id}
-								to={`/student/${student.id}`}
-							>
-								<p className="text-base font-medium">{student.name}</p>
-							</Link>
-						</CardContent>
+					<Card className="w-full max-w-sm">
+						<CardHeader>
+							<CardTitle>{student.name}</CardTitle>
+							<CardDescription>{student.birthday}</CardDescription>
+							<CardAction>
+								<Button>
+									<Link
+										key={student.id}
+										to={`/student/${student.id}`}
+									>
+										이동
+									</Link>
+								</Button>
+							</CardAction>
+						</CardHeader>
 					</Card>
 				))}
 			</div>

@@ -1,6 +1,6 @@
 import { Routes, Route } from 'react-router-dom';
 import StudentList from '@/pages/Students/StudentList';
-import SubjectList from '@/pages/Subjects/SubjectList';
+import SheetList from '@/pages/Sheets/SheetList';
 import RecordList from '@/pages/Records/RecordList';
 import RecordWrite from '@/pages/Records/RecordWrite';
 import BottomNav from '@/components/layout/BottomNav';
@@ -15,14 +15,14 @@ export default function App() {
 				/>
 				<Route
 					path="/student/:studentId"
-					element={<SubjectList />}
+					element={<SheetList />}
 				/>
 				<Route
-					path="/student/:studentId/subject/:subjectId"
+					path="/student/:studentId/sheet/:sheetId"
 					element={<RecordList />}
 				/>
 				<Route
-					path="/student/:studentId/subject/:subjectId/new"
+					path="/student/:studentId/sheet/:sheetId/new"
 					element={<RecordWrite />}
 				/>
 			</Routes>

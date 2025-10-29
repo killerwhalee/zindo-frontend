@@ -1,41 +1,92 @@
-// src/pages/Records/RecordList.tsx
-import { useParams, Link } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { Link, useParams } from 'react-router-dom';
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
-import { records, subjects } from '@/lib/dummyData';
+import type { Student, Record, Sheet } from '@/components/types';
+import { useEffect, useState } from 'react';
+import api from '@/lib/api';
 
 export default function RecordList() {
-	const { subjectId, studentId } = useParams();
-	const recordList = records[Number(subjectId)] || [];
-	const subjectName =
-		Object.values(subjects)
-			.flat()
-			.find((s) => s.id === Number(subjectId))?.name || 'Subject';
+	const { studentId, sheetId } = useParams();
+
+	const [student, setStudent] = useState<Student | null>(null);
+	const [sheet, setSheet] = useState<Sheet | null>(null);
+	const [records, setRecords] = useState<Record[]>([]);
+	const [loading, setLoading] = useState(true);
+
+	useEffect(() => {
+		async function fetchData() {
+			try {
+				const [studentRes, sheetRes, recordRes] = await Promise.all([
+					api.get<Student>('/zindo/students/' + studentId),
+					api.get<Sheet>('/zindo/sheets/' + sheetId),
+					api.get<Record[]>('/zindo/records?sheet__id=' + sheetId),
+				]);
+
+				setStudent(studentRes.data);
+				setSheet(sheetRes.data);
+				setRecords(recordRes.data);
+			} catch (err) {
+				console.error('Failed to load data:', err);
+			} finally {
+				setLoading(false);
+			}
+		}
+
+		fetchData();
+	}, []);
+
+	if (loading || !student || !sheet)
+		return <div className="p-4 text-center">Loading...</div>;
 
 	return (
-		<div className="pb-16">
-			<TopBar title={`${subjectName} Records`} />
+		<div className="pt-16">
+			<TopBar title={`학습상황기록 - ${student.name}`} />
 
 			<div className="p-4 space-y-3">
-				{recordList.map((rec) => (
-					<Card key={rec.id}>
-						<CardContent className="p-3 space-y-1">
-							<p className="text-sm text-muted-foreground">{rec.date}</p>
-							<p>{rec.text}</p>
-						</CardContent>
-					</Card>
-				))}
-			</div>
+				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+					{sheet.textbook_detail.name}
+				</h3>
+				<p>일일 권장 학습량: {sheet.pace}페이지</p>
 
-			<Button
-				variant="outline"
-				className="fixed bottom-20 right-5"
-			>
-				<Link to={`/student/${studentId}/subject/${subjectId}/new`}>
-					New Record
-				</Link>
-			</Button>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>날짜</TableHead>
+							<TableHead>진도상황</TableHead>
+							<TableHead>특이사항</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{records.map((record) => (
+							<TableRow>
+								<TableCell className="font-medium">
+									{record.created_at.slice(0, 10)}
+								</TableCell>
+								<TableCell>
+									{record.progress.start}p ~ {record.progress.end}p
+								</TableCell>
+								<TableCell className="whitespace-normal break-words align-top">
+									{record.note}
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+
+				<Button className="w-full">
+					<Link to={`/student/${student.id}/sheet/${sheet.id}/new`}>
+						새 기록 작성
+					</Link>
+				</Button>
+			</div>
 		</div>
 	);
 }
