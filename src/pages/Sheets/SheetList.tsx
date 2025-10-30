@@ -48,19 +48,13 @@ export default function SheetList() {
 			<TopBar title={`학습상황기록 - ${student.name}`} />
 			<div className="p-4 space-y-3">
 				{sheets.map((sheet) => (
-					<Card className="max-w-lg py-0 sm:flex-row sm:gap-0">
-						<CardContent className="grow-1 px-0">
-							<img
-								src={sheet.textbook_detail.image}
-								alt="Banner"
-								className="size-full rounded-t-xl"
-							/>
-						</CardContent>
-						<div className="sm:min-w-54">
+					<Card className="max-w-lg py-0 flex-row gap-0">
+						<div className="min-w-54">
 							<CardHeader className="pt-6">
 								<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 								<CardDescription>
-									{sheet.textbook_detail.subject} | ISBN
+									{sheet.textbook_detail.subject} | ISBN{' '}
+									{sheet.textbook_detail.isbn}
 								</CardDescription>
 							</CardHeader>
 							<CardFooter className="gap-3 py-6">
@@ -74,6 +68,13 @@ export default function SheetList() {
 								</Button>
 							</CardFooter>
 						</div>
+						<CardContent className="grow-1 px-0">
+							<img
+								src={sheet.textbook_detail.image}
+								alt="Book Cover"
+								className="size-full rounded-r-xl"
+							/>
+						</CardContent>
 					</Card>
 					// <Card className="hover:bg-accent transition-colors">
 					// 	<CardHeader>
