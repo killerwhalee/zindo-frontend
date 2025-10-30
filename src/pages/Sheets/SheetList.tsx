@@ -12,6 +12,7 @@ import { type Student, type Sheet } from '@/components/types';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Link, useParams } from 'react-router-dom';
+import { Separator } from '@radix-ui/react-separator';
 
 export default function SheetList() {
 	const { studentId } = useParams();
@@ -53,8 +54,9 @@ export default function SheetList() {
 							<CardHeader className="pt-6">
 								<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 								<CardDescription>
-									{sheet.textbook_detail.subject} | ISBN{' '}
-									{sheet.textbook_detail.isbn}
+									{sheet.textbook_detail.subject}
+									<Separator />
+									ISBN {sheet.textbook_detail.isbn}
 								</CardDescription>
 							</CardHeader>
 							<CardFooter className="gap-3 py-6">
@@ -76,30 +78,6 @@ export default function SheetList() {
 							/>
 						</CardContent>
 					</Card>
-					// <Card className="hover:bg-accent transition-colors">
-					// 	<CardHeader>
-					// 		<CardTitle>{sheet.textbook_detail.name}</CardTitle>
-					// 		<CardDescription>{sheet.textbook_detail.subject}</CardDescription>
-					// 		<CardAction>
-					// 			<img
-					// 				src=
-					// 				alt=""
-					// 				width={80}
-					// 			/>
-					// 		</CardAction>
-					// 	</CardHeader>
-					// 	<CardContent></CardContent>
-					// 	<CardFooter>
-					// 		<Button className="w-full">
-					// 			<Link
-					// 				key={sheet.id}
-					// 				to={`/student/${student.id}/sheet/${sheet.id}`}
-					// 			>
-					// 				이동
-					// 			</Link>
-					// 		</Button>
-					// 	</CardFooter>
-					// </Card>
 				))}
 			</div>
 		</div>

@@ -4,7 +4,6 @@ import api from '@/lib/api';
 import {
 	Card,
 	CardAction,
-	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,

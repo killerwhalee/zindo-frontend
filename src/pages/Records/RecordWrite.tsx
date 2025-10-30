@@ -1,75 +1,145 @@
-import { useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import TopBar from '@/components/layout/TopBar';
 import {
 	Field,
-	FieldDescription,
+	FieldError,
 	FieldGroup,
 	FieldLabel,
-	FieldLegend,
-	FieldSet,
 } from '@/components/ui/field';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Input } from '@/components/ui/input';
+import { Controller, useForm } from 'react-hook-form';
+
+const formSchema = z.object({
+	start: z
+		.number('숫자를 입력하세요!')
+		.min(0, '페이지 수는 0보다 커야 합니다!!'),
+	end: z.number('숫자를 입력하세요!').min(0, '페이지 수는 0보다 커야 합니다!!'),
+	note: z.string().optional(),
+});
 
 export default function RecordWrite() {
-	const navigate = useNavigate();
+	const { sheetId } = useParams();
 
-	function handleSubmit() {
-		console.log('Saved:', 'what');
-		navigate(-1); // go back to record list
+	const form = useForm<z.infer<typeof formSchema>>({
+		resolver: zodResolver(formSchema),
+	});
+
+	function onSubmit(data: z.infer<typeof formSchema>) {
+		// Build the custom JSON structure
+		const payload = {
+			sheet: Number(sheetId),
+			progress: {
+				type: 'range',
+				start: data.start,
+				end: data.end,
+			},
+			note: data.note,
+		};
+
+		console.log(payload);
 	}
 
 	return (
 		<div className="pt-16">
 			<TopBar title="New Record" />
+
 			<div className="p-4 space-y-4">
-				<form>
+				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+					새로운 기록
+				</h3>
+				<p>새로운 학습상황기록을 작성합니다.</p>
+
+				<form
+					id="record-write-form"
+					onSubmit={form.handleSubmit(onSubmit)}
+				>
 					<FieldGroup>
-						<FieldSet>
-							<FieldLegend>새로운 기록</FieldLegend>
-							<FieldDescription>
-								새로운 학습상황기록을 작성합니다.
-							</FieldDescription>
-							<FieldGroup>
-								<div className="grid grid-cols-2 gap-4">
+						<div className="grid grid-cols-2 gap-4">
+							<Controller
+								name="start"
+								control={form.control}
+								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="checkout-7j9-card-name-43j">
+										<FieldLabel htmlFor="record-write-form-start">
 											시작 페이지
 										</FieldLabel>
 										<Input
-											id="type"
-											autoComplete="off"
+											{...field}
+											type="number"
+											id="record-write-form-start"
 											placeholder="11"
+											autoComplete="off"
+											onChange={(e) =>
+												field.onChange(
+													e.target.value === ''
+														? undefined
+														: Number(e.target.value)
+												)
+											}
 										/>
+										{fieldState.invalid && (
+											<FieldError errors={[fieldState.error]} />
+										)}
 									</Field>
+								)}
+							></Controller>
+							<Controller
+								name="end"
+								control={form.control}
+								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="checkout-7j9-card-name-43j">
+										<FieldLabel htmlFor="record-write-form-end">
 											끝 페이지
 										</FieldLabel>
 										<Input
-											id="type"
-											autoComplete="off"
+											{...field}
+											type="number"
+											id="record-write-form-end"
 											placeholder="23"
+											autoComplete="off"
+											onChange={(e) =>
+												field.onChange(
+													e.target.value === ''
+														? undefined
+														: Number(e.target.value)
+												)
+											}
 										/>
+										{fieldState.invalid && (
+											<FieldError errors={[fieldState.error]} />
+										)}
 									</Field>
-								</div>
+								)}
+							></Controller>
+						</div>
+
+						<Controller
+							name="note"
+							control={form.control}
+							render={({ field, fieldState }) => (
 								<Field>
-									<FieldLabel htmlFor="checkout-7j9-optional-comments">
-										특이사항
+									<FieldLabel htmlFor="record-write-form-note">
+										오늘의 학습은 어땠나요?
 									</FieldLabel>
-									<Textarea
-										id="checkout-7j9-optional-comments"
-										placeholder="특이사항을 작성하세요 (예: 24쪽 하다 말았음)"
-										className="resize-none"
+									<Input
+										{...field}
+										id="record-write-form-note"
+										placeholder="예) 세로식 복습이 필요해 보입니다"
 									/>
+									{fieldState.invalid && (
+										<FieldError errors={[fieldState.error]} />
+									)}
 								</Field>
-							</FieldGroup>
-						</FieldSet>
+							)}
+						></Controller>
+
 						<Field>
 							<Button
+								type="submit"
 								className="w-full"
-								onClick={handleSubmit}
 							>
 								저장하기
 							</Button>
