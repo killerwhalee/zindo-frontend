@@ -12,7 +12,14 @@ import { type Student, type Sheet } from '@/components/types';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Link, useParams } from 'react-router-dom';
-import { Separator } from '@radix-ui/react-separator';
+import { Separator } from '@/components/ui/separator';
+import Loading from '@/components/layout/Loading';
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from '@/components/ui/accordion';
 
 export default function SheetList() {
 	const { studentId } = useParams();
@@ -21,6 +28,7 @@ export default function SheetList() {
 	const [sheets, setSheets] = useState<Sheet[]>([]);
 	const [loading, setLoading] = useState(true);
 
+	// fetch data from api
 	useEffect(() => {
 		async function fetchData() {
 			try {
@@ -39,46 +47,96 @@ export default function SheetList() {
 		}
 
 		fetchData();
-	}, []);
+	}, [studentId]);
 
-	if (loading || !student)
-		return <div className="p-4 text-center">Loading...</div>;
+	// filter sheets by `is_finished` field
+	const sheetsOngoing = sheets.filter((sheet) => !sheet.is_finished);
+	const sheetsFinished = sheets.filter((sheet) => sheet.is_finished);
+
+	if (loading) return <Loading />;
 
 	return (
 		<div className="pt-16">
-			<TopBar title={`학습상황기록 - ${student.name}`} />
+			<TopBar title={`학습상황기록 - ${student?.name}`} />
 			<div className="p-4 space-y-3">
-				{sheets.map((sheet) => (
-					<Card className="max-w-lg py-0 flex-row gap-0">
-						<div className="min-w-54">
-							<CardHeader className="pt-6">
-								<CardTitle>{sheet.textbook_detail.name}</CardTitle>
-								<CardDescription>
-									{sheet.textbook_detail.subject}
-									<Separator />
-									ISBN {sheet.textbook_detail.isbn}
-								</CardDescription>
-							</CardHeader>
-							<CardFooter className="gap-3 py-6">
-								<Button>
-									<Link
-										key={sheet.id}
-										to={`/student/${student.id}/sheet/${sheet.id}`}
-									>
-										기록지 보기
-									</Link>
-								</Button>
-							</CardFooter>
-						</div>
-						<CardContent className="grow-1 px-0">
-							<img
-								src={sheet.textbook_detail.image}
-								alt="Book Cover"
-								className="size-full rounded-r-xl"
-							/>
-						</CardContent>
-					</Card>
-				))}
+				<Accordion
+					type="single"
+					collapsible
+					defaultValue="sheets-ongoing"
+				>
+					<AccordionItem value="sheets-ongoing">
+						<AccordionTrigger>진행 중인 교재</AccordionTrigger>
+						<AccordionContent>
+							{sheetsOngoing.map((sheet) => (
+								<Card className="max-w-lg py-0 flex-row gap-0">
+									<div className="min-w-54">
+										<CardHeader className="pt-6">
+											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
+											<CardDescription>
+												{sheet.textbook_detail.subject}
+												<Separator />
+												ISBN {sheet.textbook_detail.isbn}
+											</CardDescription>
+										</CardHeader>
+										<CardFooter className="gap-3 py-6">
+											<Button>
+												<Link
+													key={sheet.id}
+													to={`/student/${student?.id}/sheet/${sheet.id}`}
+												>
+													기록지 보기
+												</Link>
+											</Button>
+										</CardFooter>
+									</div>
+									<CardContent className="grow-1 px-0">
+										<img
+											src={sheet.textbook_detail.image}
+											alt="Book Cover"
+											className="size-full rounded-r-xl"
+										/>
+									</CardContent>
+								</Card>
+							))}
+						</AccordionContent>
+					</AccordionItem>
+					<AccordionItem value="sheets-finished">
+						<AccordionTrigger>완료된 교재</AccordionTrigger>
+						<AccordionContent>
+							{sheetsFinished.map((sheet) => (
+								<Card className="max-w-lg py-0 flex-row gap-0">
+									<div className="min-w-54">
+										<CardHeader className="pt-6">
+											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
+											<CardDescription>
+												{sheet.textbook_detail.subject}
+												<Separator />
+												ISBN {sheet.textbook_detail.isbn}
+											</CardDescription>
+										</CardHeader>
+										<CardFooter className="gap-3 py-6">
+											<Button>
+												<Link
+													key={sheet.id}
+													to={`/student/${student?.id}/sheet/${sheet.id}`}
+												>
+													기록지 보기
+												</Link>
+											</Button>
+										</CardFooter>
+									</div>
+									<CardContent className="grow-1 px-0">
+										<img
+											src={sheet.textbook_detail.image}
+											alt="Book Cover"
+											className="size-full rounded-r-xl"
+										/>
+									</CardContent>
+								</Card>
+							))}
+						</AccordionContent>
+					</AccordionItem>
+				</Accordion>
 			</div>
 		</div>
 	);

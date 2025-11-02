@@ -11,6 +11,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Controller, useForm } from 'react-hook-form';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import type { Record } from '@/components/types';
+import api from '@/lib/api';
+import Loading from '@/components/layout/Loading';
 
 const formSchema = z.object({
 	start: z
@@ -22,11 +28,15 @@ const formSchema = z.object({
 
 export default function RecordWrite() {
 	const { sheetId } = useParams();
+	const [records, setRecords] = useState<Record[]>([]);
+	const [loading, setLoading] = useState(true);
 
+	// Use zod form for validation
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 	});
 
+	// Function to run after submission
 	function onSubmit(data: z.infer<typeof formSchema>) {
 		// Build the custom JSON structure
 		const payload = {
@@ -42,15 +52,37 @@ export default function RecordWrite() {
 		console.log(payload);
 	}
 
+	// Fetch records from given sheet, and take latest one.
+	useEffect(() => {
+		api
+			.get<Record[]>('/zindo/records?sheet__id=' + sheetId)
+			.then((res) => setRecords(res.data))
+			.catch((err) => console.error('Failed to load data:', err))
+			.finally(() => setLoading(false));
+	}, [sheetId]);
+
+	const record_latest = records.at(-1);
+
+	if (loading) return <Loading />;
+
 	return (
 		<div className="pt-16">
-			<TopBar title="New Record" />
+			<TopBar title="새 학습 기록" />
 
 			<div className="p-4 space-y-4">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-					새로운 기록
+					새 학습 기록 생성
 				</h3>
 				<p>새로운 학습상황기록을 작성합니다.</p>
+
+				<Alert>
+					<InfoIcon />
+					<AlertTitle>어제의 학습 기록은 다음과 같습니다:</AlertTitle>
+					<AlertDescription>
+						{record_latest?.progress.start}p ~ {record_latest?.progress.end}p
+					</AlertDescription>
+					<AlertDescription>{record_latest?.note}</AlertDescription>
+				</Alert>
 
 				<form
 					id="record-write-form"

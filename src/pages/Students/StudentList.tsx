@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
 import type { Student } from '@/components/types';
+import Loading from '@/components/layout/Loading';
 
 export default function StudentList() {
 	const [students, setStudents] = useState<Student[]>([]);
@@ -24,7 +25,7 @@ export default function StudentList() {
 			.finally(() => setLoading(false));
 	}, []);
 
-	if (loading) return <div className="p-4 text-center">Loading...</div>;
+	if (loading) return <Loading />;
 
 	return (
 		<div className="pt-16">

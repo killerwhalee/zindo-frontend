@@ -4,6 +4,7 @@ import SheetList from '@/pages/Sheets/SheetList';
 import RecordList from '@/pages/Records/RecordList';
 import RecordWrite from '@/pages/Records/RecordWrite';
 import BottomNav from '@/components/layout/BottomNav';
+import { Demo } from './pages/Demo';
 
 export default function App() {
 	return (
@@ -12,6 +13,10 @@ export default function App() {
 				<Route
 					path="/"
 					element={<StudentList />}
+				/>
+				<Route
+					path="/demo"
+					element={<Demo />}
 				/>
 				<Route
 					path="/student/:studentId"

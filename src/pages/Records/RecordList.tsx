@@ -12,6 +12,9 @@ import TopBar from '@/components/layout/TopBar';
 import type { Student, Record, Sheet } from '@/components/types';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
+import Loading from '@/components/layout/Loading';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { CheckIcon } from 'lucide-react';
 
 export default function RecordList() {
 	const { studentId, sheetId } = useParams();
@@ -41,20 +44,19 @@ export default function RecordList() {
 		}
 
 		fetchData();
-	}, []);
+	}, [studentId, sheetId]);
 
-	if (loading || !student || !sheet)
-		return <div className="p-4 text-center">Loading...</div>;
+	if (loading) return <Loading />;
 
 	return (
 		<div className="pt-16">
-			<TopBar title={`학습상황기록 - ${student.name}`} />
+			<TopBar title={`학습상황기록 - ${student?.name}`} />
 
 			<div className="p-4 space-y-3">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-					{sheet.textbook_detail.name}
+					{sheet?.textbook_detail.name}
 				</h3>
-				<p>일일 권장 학습량: {sheet.pace}페이지</p>
+				<p>일일 권장 학습량: {sheet?.pace}페이지</p>
 
 				<Table>
 					<TableHeader>
@@ -81,11 +83,19 @@ export default function RecordList() {
 					</TableBody>
 				</Table>
 
-				<Button className="w-full">
-					<Link to={`/student/${student.id}/sheet/${sheet.id}/new`}>
-						새 기록 작성
-					</Link>
-				</Button>
+				{/* display button only if sheet is not finished */}
+				{sheet?.is_finished ? (
+					<Alert>
+						<CheckIcon />
+						<AlertTitle>완료된 기록지입니다.</AlertTitle>
+					</Alert>
+				) : (
+					<Button className="w-full">
+						<Link to={`/student/${student?.id}/sheet/${sheet?.id}/new`}>
+							새 기록 작성
+						</Link>
+					</Button>
+				)}
 			</div>
 		</div>
 	);
