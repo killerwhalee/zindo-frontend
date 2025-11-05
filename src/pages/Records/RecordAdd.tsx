@@ -26,7 +26,7 @@ const formSchema = z.object({
 	note: z.string().optional(),
 });
 
-export default function RecordWrite() {
+export default function RecordAdd() {
 	const { sheetId } = useParams();
 	const [records, setRecords] = useState<Record[]>([]);
 	const [loading, setLoading] = useState(true);

@@ -66,7 +66,7 @@ export default function SheetList() {
 				>
 					<AccordionItem value="sheets-ongoing">
 						<AccordionTrigger>진행 중인 교재</AccordionTrigger>
-						<AccordionContent>
+						<AccordionContent className="space-y-3">
 							{sheetsOngoing.map((sheet) => (
 								<Card className="max-w-lg py-0 flex-row gap-0">
 									<div className="min-w-54">
@@ -102,7 +102,7 @@ export default function SheetList() {
 					</AccordionItem>
 					<AccordionItem value="sheets-finished">
 						<AccordionTrigger>완료된 교재</AccordionTrigger>
-						<AccordionContent>
+						<AccordionContent className="space-y-3">
 							{sheetsFinished.map((sheet) => (
 								<Card className="max-w-lg py-0 flex-row gap-0">
 									<div className="min-w-54">
@@ -137,6 +137,10 @@ export default function SheetList() {
 						</AccordionContent>
 					</AccordionItem>
 				</Accordion>
+
+				<Button className="w-full">
+					<Link to={`/student/${student?.id}/new`}>새 교재 추가</Link>
+				</Button>
 			</div>
 		</div>
 	);

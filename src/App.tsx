@@ -2,9 +2,10 @@ import { Routes, Route } from 'react-router-dom';
 import StudentList from '@/pages/Students/StudentList';
 import SheetList from '@/pages/Sheets/SheetList';
 import RecordList from '@/pages/Records/RecordList';
-import RecordWrite from '@/pages/Records/RecordWrite';
+import RecordAdd from '@/pages/Records/RecordAdd';
 import BottomNav from '@/components/layout/BottomNav';
 import { Demo } from './pages/Demo';
+import { SheetAdd } from '@/pages/Sheets/SheetAdd';
 
 export default function App() {
 	return (
@@ -23,12 +24,16 @@ export default function App() {
 					element={<SheetList />}
 				/>
 				<Route
+					path="/student/:studentId/new"
+					element={<SheetAdd />}
+				/>
+				<Route
 					path="/student/:studentId/sheet/:sheetId"
 					element={<RecordList />}
 				/>
 				<Route
 					path="/student/:studentId/sheet/:sheetId/new"
-					element={<RecordWrite />}
+					element={<RecordAdd />}
 				/>
 			</Routes>
 			<BottomNav />
