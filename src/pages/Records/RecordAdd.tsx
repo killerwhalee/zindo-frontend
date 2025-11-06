@@ -17,6 +17,13 @@ import { useEffect, useState } from 'react';
 import type { Record } from '@/components/types';
 import api from '@/lib/api';
 import Loading from '@/components/layout/Loading';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
 
 const formSchema = z.object({
 	start: z
@@ -27,29 +34,45 @@ const formSchema = z.object({
 });
 
 export default function RecordAdd() {
+	// Get query params
 	const { sheetId } = useParams();
+
+	// State for record fetching
 	const [records, setRecords] = useState<Record[]>([]);
 	const [loading, setLoading] = useState(true);
+
+	// State for dialog
+	const [open, setOpen] = useState(false);
+	const [isSuccess, setIsSuccess] = useState(false);
 
 	// Use zod form for validation
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 	});
 
-	// Function to run after submission
-	function onSubmit(data: z.infer<typeof formSchema>) {
-		// Build the custom JSON structure
-		const payload = {
-			sheet: Number(sheetId),
-			progress: {
-				type: 'range',
-				start: data.start,
-				end: data.end,
-			},
-			note: data.note,
-		};
+	/**
+	 * Function to run after submission
+	 */
+	async function onSubmit(data: z.infer<typeof formSchema>) {
+		try {
+			await api.post('/zindo/records/', {
+				sheet: Number(sheetId),
+				progress: {
+					type: 'range',
+					start: data.start,
+					end: data.end,
+				},
+				note: data.note,
+			});
+			setIsSuccess(true);
+		} catch (err) {
+			console.error('Failed to post data:', err);
+			setIsSuccess(false);
+		} finally {
+			setOpen(true);
+		}
 
-		console.log(payload);
+		console.log('finished!');
 	}
 
 	// Fetch records from given sheet, and take latest one.
@@ -75,14 +98,21 @@ export default function RecordAdd() {
 				</h3>
 				<p>새로운 학습상황기록을 작성합니다.</p>
 
-				<Alert>
-					<InfoIcon />
-					<AlertTitle>어제의 학습 기록은 다음과 같습니다:</AlertTitle>
-					<AlertDescription>
-						{record_latest?.progress.start}p ~ {record_latest?.progress.end}p
-					</AlertDescription>
-					<AlertDescription>{record_latest?.note}</AlertDescription>
-				</Alert>
+				{record_latest ? (
+					<Alert>
+						<InfoIcon />
+						<AlertTitle>어제의 학습 기록은 다음과 같습니다:</AlertTitle>
+						<AlertDescription>
+							{record_latest?.progress.start}p ~ {record_latest?.progress.end}p
+						</AlertDescription>
+						<AlertDescription>{record_latest?.note}</AlertDescription>
+					</Alert>
+				) : (
+					<Alert>
+						<InfoIcon />
+						<AlertTitle>최근 학습 기록이 없습니다 🥺</AlertTitle>
+					</Alert>
+				)}
 
 				<form
 					id="record-write-form"
@@ -154,7 +184,8 @@ export default function RecordAdd() {
 							render={({ field, fieldState }) => (
 								<Field>
 									<FieldLabel htmlFor="record-write-form-note">
-										오늘의 학습은 어땠나요?
+										(선택) 오늘의 학습은 어땠나요? <br />
+										여기에 작성하시면 다른 선생님께 도움이 될 수 있어요!
 									</FieldLabel>
 									<Input
 										{...field}
@@ -178,6 +209,54 @@ export default function RecordAdd() {
 						</Field>
 					</FieldGroup>
 				</form>
+
+				{/* dialog */}
+				<Dialog
+					open={open}
+					onOpenChange={setOpen}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>
+								{isSuccess ? '등록 완료 🥳' : '등록 실패 🥺'}
+							</DialogTitle>
+						</DialogHeader>
+
+						{isSuccess ? (
+							<div className="space-y-3">
+								<p className="text-center">
+									기록이 성공적으로 추가되었습니다.
+								</p>
+								<DialogFooter>
+									<Button
+										onClick={() => {
+											setOpen(false);
+											// Navigate back to the sheet list
+											window.history.back();
+										}}
+									>
+										목록으로 돌아가기
+									</Button>
+								</DialogFooter>
+							</div>
+						) : (
+							<div className="space-y-3">
+								<p className="text-center">
+									기록 등록에 실패했습니다. <br />
+									잠시 후 다시 시도해 주세요.
+								</p>
+								<DialogFooter>
+									<Button
+										variant="outline"
+										onClick={() => setOpen(false)}
+									>
+										닫기
+									</Button>
+								</DialogFooter>
+							</div>
+						)}
+					</DialogContent>
+				</Dialog>
 			</div>
 		</div>
 	);

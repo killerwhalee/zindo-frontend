@@ -56,7 +56,10 @@ export default function RecordList() {
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
 					{sheet?.textbook_detail.name}
 				</h3>
-				<p>일일 권장 학습량: {sheet?.pace}페이지</p>
+				<p>
+					일일 권장 학습량:{' '}
+					{sheet?.pace ? `${sheet.pace}페이지` : '지정되지 않음'}
+				</p>
 
 				<Table>
 					<TableHeader>
@@ -80,6 +83,16 @@ export default function RecordList() {
 								</TableCell>
 							</TableRow>
 						))}
+						{records.length === 0 && (
+							<TableRow>
+								<TableCell
+									className="text-center"
+									colSpan={3}
+								>
+									작성된 기록이 아직 없습니다 🥺
+								</TableCell>
+							</TableRow>
+						)}
 					</TableBody>
 				</Table>
 

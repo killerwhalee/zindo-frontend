@@ -74,8 +74,6 @@ export default function SheetList() {
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
 												{sheet.textbook_detail.subject}
-												<Separator />
-												ISBN {sheet.textbook_detail.isbn}
 											</CardDescription>
 										</CardHeader>
 										<CardFooter className="gap-3 py-6">
@@ -98,6 +96,11 @@ export default function SheetList() {
 									</CardContent>
 								</Card>
 							))}
+							{sheetsOngoing.length === 0 && (
+								<div className="text-center">
+									현재 진행 중인 교재가 없습니다 🥺
+								</div>
+							)}
 						</AccordionContent>
 					</AccordionItem>
 					<AccordionItem value="sheets-finished">
@@ -134,6 +137,11 @@ export default function SheetList() {
 									</CardContent>
 								</Card>
 							))}
+							{sheetsFinished.length === 0 && (
+								<div className="text-center">
+									완료된 교재가 아직 없습니다 🥺
+								</div>
+							)}
 						</AccordionContent>
 					</AccordionItem>
 				</Accordion>
