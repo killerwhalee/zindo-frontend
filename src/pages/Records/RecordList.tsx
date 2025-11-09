@@ -14,21 +14,93 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Loading from '@/components/layout/Loading';
 import { Alert, AlertTitle } from '@/components/ui/alert';
-import { CheckIcon, MoreHorizontalIcon } from 'lucide-react';
+import { CheckIcon, Minus, MoreHorizontalIcon, Plus } from 'lucide-react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+	Dialog,
+	DialogClose,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
+import {
+	Drawer,
+	DrawerClose,
+	DrawerContent,
+	DrawerDescription,
+	DrawerFooter,
+	DrawerHeader,
+	DrawerTitle,
+} from '@/components/ui/drawer';
+import { DialogDescription } from '@radix-ui/react-dialog';
 
 export default function RecordList() {
+	// Get query params
 	const { studentId, sheetId } = useParams();
 
+	// State for record fetching
 	const [student, setStudent] = useState<Student | null>(null);
 	const [sheet, setSheet] = useState<Sheet | null>(null);
 	const [records, setRecords] = useState<Record[]>([]);
 	const [loading, setLoading] = useState(true);
+
+	// State for pace setting
+	const [openPace, setOpenPace] = useState(false);
+	const [pace, setPace] = useState(4);
+
+	// State for finish sheet
+	const [openFinish, setOpenFinish] = useState(false);
+	const [isSuccess, setIsSuccess] = useState(false);
+	const [openResult, setOpenResult] = useState(false);
+
+	async function onSubmitPace() {
+		try {
+			await api.patch(`/zindo/sheets/${sheetId}/`, {
+				pace: pace,
+			});
+			setIsSuccess(true);
+		} catch (err) {
+			console.error('Failed to patch data:', err);
+			setIsSuccess(false);
+		} finally {
+			setOpenPace(false);
+			setLoading(true);
+		}
+	}
+
+	/**
+	 * Function to run after submission
+	 */
+	async function onSubmitFinish() {
+		try {
+			await api.patch(`/zindo/sheets/${sheetId}/`, {
+				is_finished: true,
+			});
+			setIsSuccess(true);
+		} catch (err) {
+			console.error('Failed to patch data:', err);
+			setIsSuccess(false);
+		} finally {
+			setOpenFinish(false);
+			setOpenResult(true);
+		}
+	}
+
+	/**
+	 * Function to adjust pace
+	 *
+	 * Pace limit is [1, 42].
+	 * There's no reason to be 42; It's the ultimate answer for everything.
+	 */
+	function onClick(adjustment: number) {
+		setPace(Math.max(1, Math.min(42, pace + adjustment)));
+	}
 
 	useEffect(() => {
 		async function fetchData() {
@@ -39,9 +111,13 @@ export default function RecordList() {
 					api.get<Record[]>('/zindo/records?sheet__id=' + sheetId),
 				]);
 
+				// fetch data from response
 				setStudent(studentRes.data);
 				setSheet(sheetRes.data);
 				setRecords(recordRes.data);
+
+				// set initial pace
+				setPace(sheetRes.data.pace);
 			} catch (err) {
 				console.error('Failed to load data:', err);
 			} finally {
@@ -50,7 +126,7 @@ export default function RecordList() {
 		}
 
 		fetchData();
-	}, [studentId, sheetId]);
+	}, [studentId, sheetId, loading]);
 
 	if (loading) return <Loading />;
 
@@ -62,10 +138,190 @@ export default function RecordList() {
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
 					{sheet?.textbook_detail.name}
 				</h3>
-				<p>
-					일일 권장 학습량:{' '}
-					{sheet?.pace ? `${sheet.pace}페이지` : '지정되지 않음'}
-				</p>
+
+				<div className="flex justify-between">
+					<div className="content-center">
+						<p>
+							일일 학습 목표:{' '}
+							{sheet?.pace ? `${sheet.pace}페이지` : '지정되지 않음'}
+						</p>
+					</div>
+
+					<div>
+						<DropdownMenu modal={false}>
+							<DropdownMenuTrigger asChild>
+								<Button
+									type="button"
+									variant="outline"
+									size="icon-sm"
+								>
+									<MoreHorizontalIcon />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onSelect={() => setOpenPace(true)}>
+									학습 목표 설정
+								</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => setOpenFinish(true)}>
+									기록 완료 처리
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+
+						{/* Drawer for pace setting */}
+						<Drawer
+							open={openPace}
+							onOpenChange={setOpenPace}
+						>
+							<DrawerContent>
+								<DrawerHeader>
+									<DrawerTitle>일일 학습 목표 설정</DrawerTitle>
+									<DrawerDescription>
+										하루에 몇 페이지씩 풀까요?
+									</DrawerDescription>
+								</DrawerHeader>
+
+								<div className="p-4">
+									<div className="flex items-center justify-center space-x-2">
+										<Button
+											variant="outline"
+											size="icon"
+											className="h-16 w-16"
+											onClick={() => onClick(-1)}
+											disabled={pace <= 1}
+										>
+											<Minus />
+										</Button>
+
+										<div className="flex-1 text-center">
+											<div className="text-7xl font-bold tracking-tighter">
+												{pace}
+											</div>
+											<div className="text-muted-foreground text-xs">
+												페이지
+											</div>
+										</div>
+
+										<Button
+											variant="outline"
+											size="icon"
+											className="h-16 w-16"
+											onClick={() => onClick(1)}
+											disabled={pace >= 42}
+										>
+											<Plus />
+										</Button>
+									</div>
+								</div>
+
+								<DrawerFooter>
+									<div className="grid grid-cols-2 gap-4">
+										<Button
+											type="button"
+											onClick={onSubmitPace}
+										>
+											설정 완료
+										</Button>
+										<DrawerClose asChild>
+											<Button
+												type="button"
+												variant="secondary"
+											>
+												취소
+											</Button>
+										</DrawerClose>
+									</div>
+								</DrawerFooter>
+							</DrawerContent>
+						</Drawer>
+
+						{/* Dialog for finish sheet */}
+						<Dialog
+							open={openFinish}
+							onOpenChange={setOpenFinish}
+						>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>기록 완료 처리</DialogTitle>
+									<DialogDescription></DialogDescription>
+								</DialogHeader>
+
+								<div className="space-y-3">
+									<p className="text-center">
+										해당 기록지를 완료 처리하겠습니까? <br />
+										완료 처리된 이후에는 수정이 불가합니다.
+									</p>
+									<DialogFooter>
+										<div className="grid grid-cols-2 gap-4">
+											<DialogClose>
+												<Button
+													variant="secondary"
+													className="w-full"
+												>
+													취소
+												</Button>
+											</DialogClose>
+											<Button
+												type="button"
+												onClick={onSubmitFinish}
+											>
+												완료 처리
+											</Button>
+										</div>
+									</DialogFooter>
+								</div>
+							</DialogContent>
+						</Dialog>
+
+						{/* Dialog for result */}
+						<Dialog
+							open={openResult}
+							onOpenChange={setOpenResult}
+						>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>
+										{isSuccess ? '처리 완료 🥳' : '처리 실패 🥺'}
+									</DialogTitle>
+								</DialogHeader>
+
+								{isSuccess ? (
+									<div className="space-y-3">
+										<p className="text-center">
+											기록지가 성공적으로 완료 처리되었습니다.
+										</p>
+										<DialogFooter>
+											<Button
+												onClick={() => {
+													setOpenResult(false);
+													// Navigate back to the sheet list
+													window.history.back();
+												}}
+											>
+												목록으로 돌아가기
+											</Button>
+										</DialogFooter>
+									</div>
+								) : (
+									<div className="space-y-3">
+										<p className="text-center">
+											기록지 완료 처리에 실패했습니다. <br />
+											잠시 후 다시 시도해 주세요.
+										</p>
+										<DialogFooter>
+											<Button
+												variant="outline"
+												onClick={() => setOpenResult(false)}
+											>
+												닫기
+											</Button>
+										</DialogFooter>
+									</div>
+								)}
+							</DialogContent>
+						</Dialog>
+					</div>
+				</div>
 
 				<Table>
 					<TableHeader>

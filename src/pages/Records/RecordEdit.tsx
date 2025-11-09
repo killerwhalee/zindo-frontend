@@ -71,8 +71,6 @@ export default function RecordEdit() {
 		} finally {
 			setOpenPatch(true);
 		}
-
-		console.log('finished!');
 	}
 
 	/**
@@ -105,7 +103,7 @@ export default function RecordEdit() {
 			form.reset({
 				start: record?.progress.start,
 				end: record?.progress.end,
-				note: record?.note,
+				note: record?.note ?? "",
 			});
 		}
 	}, [form, record]);
@@ -238,7 +236,12 @@ export default function RecordEdit() {
 									<DialogFooter>
 										<div className="grid grid-cols-2 gap-4">
 											<DialogClose>
-												<Button variant="secondary">취소</Button>
+												<Button
+													variant="secondary"
+													className="w-full"
+												>
+													취소
+												</Button>
 											</DialogClose>
 											<Button
 												variant="destructive"
