@@ -14,7 +14,13 @@ import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Loading from '@/components/layout/Loading';
 import { Alert, AlertTitle } from '@/components/ui/alert';
-import { CheckIcon } from 'lucide-react';
+import { CheckIcon, MoreHorizontalIcon } from 'lucide-react';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function RecordList() {
 	const { studentId, sheetId } = useParams();
@@ -66,20 +72,43 @@ export default function RecordList() {
 						<TableRow>
 							<TableHead>날짜</TableHead>
 							<TableHead>진도상황</TableHead>
-							<TableHead>특이사항</TableHead>
+							<TableHead>메모</TableHead>
+							<TableHead></TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{records.map((record) => (
-							<TableRow>
+							<TableRow key={record.id}>
 								<TableCell className="font-medium">
 									{record.created_at.slice(0, 10)}
 								</TableCell>
 								<TableCell>
 									{record.progress.start}p ~ {record.progress.end}p
 								</TableCell>
-								<TableCell className="whitespace-normal break-words align-top">
+								<TableCell className="whitespace-normal break-words align-middle">
 									{record.note}
+								</TableCell>
+								<TableCell>
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon-sm"
+											>
+												<MoreHorizontalIcon />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent>
+											<DropdownMenuItem>
+												<Link
+													to={`/student/${student?.id}/sheet/${sheet?.id}/record/${record.id}/edit`}
+												>
+													수정하기
+												</Link>
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</TableCell>
 							</TableRow>
 						))}
@@ -103,11 +132,14 @@ export default function RecordList() {
 						<AlertTitle>완료된 기록지입니다.</AlertTitle>
 					</Alert>
 				) : (
-					<Button className="w-full">
-						<Link to={`/student/${student?.id}/sheet/${sheet?.id}/new`}>
+					<Link to={`/student/${student?.id}/sheet/${sheet?.id}/new`}>
+						<Button
+							type="button"
+							className="w-full"
+						>
 							새 기록 작성
-						</Link>
-					</Button>
+						</Button>
+					</Link>
 				)}
 			</div>
 		</div>

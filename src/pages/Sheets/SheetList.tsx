@@ -68,23 +68,23 @@ export default function SheetList() {
 						<AccordionTrigger>진행 중인 교재</AccordionTrigger>
 						<AccordionContent className="space-y-3">
 							{sheetsOngoing.map((sheet) => (
-								<Card className="max-w-lg py-0 flex-row gap-0">
+								<Card
+									key={sheet.id}
+									className="max-w-lg py-0 flex-row gap-0"
+								>
 									<div className="min-w-54">
 										<CardHeader className="pt-6">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
 												{sheet.textbook_detail.subject}
+												<Separator />
+												ISBN {sheet.textbook_detail.isbn}
 											</CardDescription>
 										</CardHeader>
 										<CardFooter className="gap-3 py-6">
-											<Button>
-												<Link
-													key={sheet.id}
-													to={`/student/${student?.id}/sheet/${sheet.id}`}
-												>
-													기록지 보기
-												</Link>
-											</Button>
+											<Link to={`/student/${student?.id}/sheet/${sheet.id}`}>
+												<Button type="button">기록지 보기</Button>
+											</Link>
 										</CardFooter>
 									</div>
 									<CardContent className="grow-1 px-0">
@@ -107,7 +107,10 @@ export default function SheetList() {
 						<AccordionTrigger>완료된 교재</AccordionTrigger>
 						<AccordionContent className="space-y-3">
 							{sheetsFinished.map((sheet) => (
-								<Card className="max-w-lg py-0 flex-row gap-0">
+								<Card
+									key={sheet.id}
+									className="max-w-lg py-0 flex-row gap-0"
+								>
 									<div className="min-w-54">
 										<CardHeader className="pt-6">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
@@ -118,14 +121,9 @@ export default function SheetList() {
 											</CardDescription>
 										</CardHeader>
 										<CardFooter className="gap-3 py-6">
-											<Button>
-												<Link
-													key={sheet.id}
-													to={`/student/${student?.id}/sheet/${sheet.id}`}
-												>
-													기록지 보기
-												</Link>
-											</Button>
+											<Link to={`/student/${student?.id}/sheet/${sheet.id}`}>
+												<Button type="button">기록지 보기</Button>
+											</Link>
 										</CardFooter>
 									</div>
 									<CardContent className="grow-1 px-0">
@@ -146,7 +144,10 @@ export default function SheetList() {
 					</AccordionItem>
 				</Accordion>
 
-				<Button className="w-full">
+				<Button
+					type="button"
+					className="w-full"
+				>
 					<Link to={`/student/${student?.id}/new`}>새 교재 추가</Link>
 				</Button>
 			</div>

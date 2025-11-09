@@ -11,19 +11,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Sheet, Record } from '@/components/types';
+import type { Record } from '@/components/types';
 import api from '@/lib/api';
 import Loading from '@/components/layout/Loading';
 import {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import { DialogTrigger } from '@radix-ui/react-dialog';
 
 const formSchema = z.object({
 	start: z
@@ -33,17 +33,17 @@ const formSchema = z.object({
 	note: z.string().optional(),
 });
 
-export default function RecordAdd() {
+export default function RecordEdit() {
 	// Get query params
-	const { sheetId } = useParams();
+	const { recordId } = useParams();
 
 	// State for record fetching
-	const [sheet, setSheet] = useState<Sheet | null>(null);
 	const [record, setRecord] = useState<Record | null>(null);
 	const [loading, setLoading] = useState(true);
 
 	// State for dialog
-	const [open, setOpen] = useState(false);
+	const [openPatch, setOpenPatch] = useState(false);
+	const [openDelete, setOpenDelete] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
 
 	// Use zod form for validation
@@ -54,10 +54,9 @@ export default function RecordAdd() {
 	/**
 	 * Function to run after submission
 	 */
-	async function onSubmit(data: z.infer<typeof formSchema>) {
+	async function editRecord(data: z.infer<typeof formSchema>) {
 		try {
-			await api.post('/zindo/records/', {
-				sheet: Number(sheetId),
+			await api.patch(`/zindo/records/${recordId}/`, {
 				progress: {
 					type: 'range',
 					start: data.start,
@@ -67,35 +66,49 @@ export default function RecordAdd() {
 			});
 			setIsSuccess(true);
 		} catch (err) {
-			console.error('Failed to post data:', err);
+			console.error('Failed to patch data:', err);
 			setIsSuccess(false);
 		} finally {
-			setOpen(true);
+			setOpenPatch(true);
 		}
 
 		console.log('finished!');
 	}
 
-	// Fetch data from api
-	useEffect(() => {
-		async function fetchData() {
-			try {
-				const [sheetRes, recordsRes] = await Promise.all([
-					api.get<Sheet>(`/zindo/sheets/${sheetId}`),
-					api.get<Record[]>(`/zindo/records?sheet__id=${sheetId}`),
-				]);
-
-				setSheet(sheetRes.data);
-				setRecord(recordsRes.data.at(-1) ?? null);
-			} catch (err) {
-				console.error('Failed to load data:', err);
-			} finally {
-				setLoading(false);
-			}
+	/**
+	 * Function to run after pressing delete button
+	 */
+	async function deleteRecord() {
+		try {
+			await api.delete(`/zindo/records/${recordId}/`);
+			setIsSuccess(true);
+		} catch (err) {
+			console.error('Failed to delete data:', err);
+			setIsSuccess(false);
+		} finally {
+			setOpenDelete(true);
 		}
+	}
 
-		fetchData();
-	}, [sheetId]);
+	// Fetch records from given sheet, and take latest one.
+	useEffect(() => {
+		api
+			.get<Record>(`/zindo/records/${recordId}/`)
+			.then((res) => setRecord(res.data))
+			.catch((err) => console.error('Failed to load data:', err))
+			.finally(() => setLoading(false));
+	}, [recordId]);
+
+	// Fill record data into form.
+	useEffect(() => {
+		if (record) {
+			form.reset({
+				start: record?.progress.start,
+				end: record?.progress.end,
+				note: record?.note,
+			});
+		}
+	}, [form, record]);
 
 	if (loading) return <Loading />;
 
@@ -105,29 +118,13 @@ export default function RecordAdd() {
 
 			<div className="p-4 space-y-4">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-					새 학습 기록 생성
+					학습 기록 수정
 				</h3>
-				<p>새로운 학습상황기록을 작성합니다.</p>
-
-				{record ? (
-					<Alert>
-						<InfoIcon />
-						<AlertTitle>어제의 학습 기록은 다음과 같습니다:</AlertTitle>
-						<AlertDescription>
-							{record.progress.start}p ~ {record.progress.end}p
-						</AlertDescription>
-						<AlertDescription>{record.note}</AlertDescription>
-					</Alert>
-				) : (
-					<Alert>
-						<InfoIcon />
-						<AlertTitle>최근 학습 기록이 없습니다 🥺</AlertTitle>
-					</Alert>
-				)}
+				<p>작성된 학습상황기록을 수정합니다.</p>
 
 				<form
 					id="record-write-form"
-					onSubmit={form.handleSubmit(onSubmit)}
+					onSubmit={form.handleSubmit(editRecord)}
 				>
 					<FieldGroup>
 						<div className="grid grid-cols-2 gap-4">
@@ -143,9 +140,7 @@ export default function RecordAdd() {
 											{...field}
 											type="number"
 											id="record-write-form-start"
-											placeholder={
-												record ? String(record.progress.end + 1) : ''
-											}
+											placeholder="11"
 											autoComplete="off"
 											onChange={(e) =>
 												field.onChange(
@@ -173,11 +168,7 @@ export default function RecordAdd() {
 											{...field}
 											type="number"
 											id="record-write-form-end"
-											placeholder={
-												record
-													? String(record.progress.end + (sheet?.pace ?? 4))
-													: ''
-											}
+											placeholder="23"
 											autoComplete="off"
 											onChange={(e) =>
 												field.onChange(
@@ -216,36 +207,72 @@ export default function RecordAdd() {
 							)}
 						></Controller>
 
-						<Field>
-							<Button
-								type="submit"
-								className="w-full"
-							>
-								저장하기
-							</Button>
-						</Field>
+						<div className="grid grid-cols-2 gap-4">
+							<Field>
+								<Button
+									type="submit"
+									className="w-full"
+								>
+									수정 완료
+								</Button>
+							</Field>
+							<Dialog>
+								<DialogTrigger>
+									<Button
+										type="button"
+										variant="destructive"
+										className="w-full"
+									>
+										기록 삭제
+									</Button>
+								</DialogTrigger>
+								<DialogContent>
+									<DialogHeader>
+										<DialogTitle>기록 삭제 💥</DialogTitle>
+									</DialogHeader>
+
+									<p className="text-center">
+										기록을 삭제하시겠습니까? <br />
+										삭제된 기록은 복구할 수 없습니다!!
+									</p>
+									<DialogFooter>
+										<div className="grid grid-cols-2 gap-4">
+											<DialogClose>
+												<Button variant="secondary">취소</Button>
+											</DialogClose>
+											<Button
+												variant="destructive"
+												onClick={deleteRecord}
+											>
+												삭제
+											</Button>
+										</div>
+									</DialogFooter>
+								</DialogContent>
+							</Dialog>
+						</div>
 					</FieldGroup>
 				</form>
 
-				{/* dialog */}
+				{/* dialog after patch */}
 				<Dialog
-					open={open}
-					onOpenChange={setOpen}
+					open={openPatch}
+					onOpenChange={setOpenPatch}
 				>
 					<DialogContent>
 						<DialogHeader>
 							<DialogTitle>
-								{isSuccess ? '등록 완료 🥳' : '등록 실패 🥺'}
+								{isSuccess ? '수정 완료 🥳' : '수정 실패 🥺'}
 							</DialogTitle>
 						</DialogHeader>
 
 						{isSuccess ? (
 							<div className="space-y-3">
-								<p className="text-center">기록이 성공적으로 추가되었습니다.</p>
+								<p className="text-center">기록이 성공적으로 수정되었습니다.</p>
 								<DialogFooter>
 									<Button
 										onClick={() => {
-											setOpen(false);
+											setOpenPatch(false);
 											// Navigate back to the sheet list
 											window.history.back();
 										}}
@@ -257,13 +284,59 @@ export default function RecordAdd() {
 						) : (
 							<div className="space-y-3">
 								<p className="text-center">
-									기록 등록에 실패했습니다. <br />
+									기록 수정에 실패했습니다. <br />
 									잠시 후 다시 시도해 주세요.
 								</p>
 								<DialogFooter>
 									<Button
 										variant="outline"
-										onClick={() => setOpen(false)}
+										onClick={() => setOpenPatch(false)}
+									>
+										닫기
+									</Button>
+								</DialogFooter>
+							</div>
+						)}
+					</DialogContent>
+				</Dialog>
+
+				{/* dialog after delete */}
+				<Dialog
+					open={openDelete}
+					onOpenChange={setOpenDelete}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>
+								{isSuccess ? '삭제 완료 🥳' : '삭제 실패 🥺'}
+							</DialogTitle>
+						</DialogHeader>
+
+						{isSuccess ? (
+							<div className="space-y-3">
+								<p className="text-center">기록이 성공적으로 삭제되었습니다.</p>
+								<DialogFooter>
+									<Button
+										onClick={() => {
+											setOpenDelete(false);
+											// Navigate back to the sheet list
+											window.history.back();
+										}}
+									>
+										목록으로 돌아가기
+									</Button>
+								</DialogFooter>
+							</div>
+						) : (
+							<div className="space-y-3">
+								<p className="text-center">
+									기록 삭제에 실패했습니다. <br />
+									잠시 후 다시 시도해 주세요.
+								</p>
+								<DialogFooter>
+									<Button
+										variant="outline"
+										onClick={() => setOpenDelete(false)}
 									>
 										닫기
 									</Button>

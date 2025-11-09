@@ -6,6 +6,7 @@ import RecordAdd from '@/pages/Records/RecordAdd';
 import BottomNav from '@/components/layout/BottomNav';
 import { Demo } from './pages/Demo';
 import { SheetAdd } from '@/pages/Sheets/SheetAdd';
+import RecordEdit from './pages/Records/RecordEdit';
 
 export default function App() {
 	return (
@@ -27,6 +28,7 @@ export default function App() {
 					path="/student/:studentId/new"
 					element={<SheetAdd />}
 				/>
+
 				<Route
 					path="/student/:studentId/sheet/:sheetId"
 					element={<RecordList />}
@@ -34,6 +36,10 @@ export default function App() {
 				<Route
 					path="/student/:studentId/sheet/:sheetId/new"
 					element={<RecordAdd />}
+				/>
+				<Route
+					path="/student/:studentId/sheet/:sheetId/record/:recordId/edit"
+					element={<RecordEdit />}
 				/>
 			</Routes>
 			<BottomNav />

@@ -32,19 +32,19 @@ export default function StudentList() {
 			<TopBar title="아동 목록" />
 			<div className="p-4 space-y-3">
 				{students.map((student) => (
-					<Card className="w-full max-w-sm">
+					<Card
+						key={student.id}
+						className="w-full max-w-sm"
+					>
 						<CardHeader>
 							<CardTitle>{student.name}</CardTitle>
-							<CardDescription>{student.birthday}</CardDescription>
+							<CardDescription>{student.grade}학년</CardDescription>
 							<CardAction>
-								<Button>
-									<Link
-										key={student.id}
-										to={`/student/${student.id}`}
-									>
-										이동
-									</Link>
-								</Button>
+								<Link
+									to={`/student/${student.id}`}
+								>
+									<Button type="button">이동</Button>
+								</Link>
 							</CardAction>
 						</CardHeader>
 					</Card>
