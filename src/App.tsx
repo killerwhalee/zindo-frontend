@@ -12,14 +12,19 @@ export default function App() {
 	return (
 		<div className="max-w-md mx-auto min-h-screen relative pb-16 bg-background text-foreground">
 			<Routes>
-				<Route
-					path="/"
-					element={<StudentList />}
-				/>
+				{/* Demo */}
 				<Route
 					path="/demo"
 					element={<Demo />}
 				/>
+
+				{/* Students */}
+				<Route
+					path="/"
+					element={<StudentList />}
+				/>
+
+				{/* Sheets */}
 				<Route
 					path="/student/:studentId"
 					element={<SheetList />}
@@ -29,6 +34,7 @@ export default function App() {
 					element={<SheetAdd />}
 				/>
 
+				{/* Records */}
 				<Route
 					path="/student/:studentId/sheet/:sheetId"
 					element={<RecordList />}

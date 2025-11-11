@@ -86,7 +86,7 @@ export default function RecordAdd() {
 				]);
 
 				setSheet(sheetRes.data);
-				setRecord(recordsRes.data.at(-1) ?? null);
+				setRecord(recordsRes.data.at(0) ?? null);
 			} catch (err) {
 				console.error('Failed to load data:', err);
 			} finally {

@@ -13,8 +13,13 @@ import type { Student, Record, Sheet } from '@/components/types';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Loading from '@/components/layout/Loading';
-import { Alert, AlertTitle } from '@/components/ui/alert';
-import { CheckIcon, Minus, MoreHorizontalIcon, Plus } from 'lucide-react';
+import {
+	CheckIcon,
+	Minus,
+	MoreHorizontalIcon,
+	Plus,
+	PlusIcon,
+} from 'lucide-react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -139,6 +144,7 @@ export default function RecordList() {
 					{sheet?.textbook_detail.name}
 				</h3>
 
+				{/* Daily pace display */}
 				<div className="flex justify-between">
 					<div className="content-center">
 						<p>
@@ -147,6 +153,7 @@ export default function RecordList() {
 						</p>
 					</div>
 
+					{/* Dropdown menu */}
 					<div>
 						<DropdownMenu modal={false}>
 							<DropdownMenuTrigger asChild>
@@ -323,6 +330,9 @@ export default function RecordList() {
 					</div>
 				</div>
 
+				{/* display button only if sheet is not finished */}
+
+				{/* Record table */}
 				<Table>
 					<TableHeader>
 						<TableRow>
@@ -333,6 +343,35 @@ export default function RecordList() {
 						</TableRow>
 					</TableHeader>
 					<TableBody>
+						{/* add record button */}
+						<TableRow>
+							<TableCell colSpan={4}>
+								{sheet?.is_finished ? (
+									<Button
+										type="button"
+										size="sm"
+										variant="secondary"
+										className="w-full"
+										disabled
+									>
+										<CheckIcon />
+										완료된 기록지입니다.
+									</Button>
+								) : (
+									<Link to={`/student/${student?.id}/sheet/${sheet?.id}/new`}>
+										<Button
+											type="button"
+											size="sm"
+											variant="secondary"
+											className="w-full"
+										>
+											<PlusIcon />새 기록 작성
+										</Button>
+									</Link>
+								)}
+							</TableCell>
+						</TableRow>
+
 						{records.map((record) => (
 							<TableRow key={record.id}>
 								<TableCell className="font-medium">
@@ -380,23 +419,6 @@ export default function RecordList() {
 						)}
 					</TableBody>
 				</Table>
-
-				{/* display button only if sheet is not finished */}
-				{sheet?.is_finished ? (
-					<Alert>
-						<CheckIcon />
-						<AlertTitle>완료된 기록지입니다.</AlertTitle>
-					</Alert>
-				) : (
-					<Link to={`/student/${student?.id}/sheet/${sheet?.id}/new`}>
-						<Button
-							type="button"
-							className="w-full"
-						>
-							새 기록 작성
-						</Button>
-					</Link>
-				)}
 			</div>
 		</div>
 	);

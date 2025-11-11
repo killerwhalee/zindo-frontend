@@ -103,7 +103,7 @@ export default function RecordEdit() {
 			form.reset({
 				start: record?.progress.start,
 				end: record?.progress.end,
-				note: record?.note ?? "",
+				note: record?.note ?? undefined,
 			});
 		}
 	}, [form, record]);
@@ -138,7 +138,7 @@ export default function RecordEdit() {
 											{...field}
 											type="number"
 											id="record-write-form-start"
-											placeholder="11"
+											placeholder={String(record?.progress.start ?? undefined)}
 											autoComplete="off"
 											onChange={(e) =>
 												field.onChange(
@@ -166,7 +166,7 @@ export default function RecordEdit() {
 											{...field}
 											type="number"
 											id="record-write-form-end"
-											placeholder="23"
+											placeholder={String(record?.progress.end ?? undefined)}
 											autoComplete="off"
 											onChange={(e) =>
 												field.onChange(
