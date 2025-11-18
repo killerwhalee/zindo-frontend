@@ -1,12 +1,15 @@
 import { Routes, Route } from 'react-router-dom';
+import BottomNav from '@/components/layout/BottomNav';
+
+// Pages
+import Demo from '@/pages/Demo';
+import Home from '@/pages/Home';
 import StudentList from '@/pages/Students/StudentList';
 import SheetList from '@/pages/Sheets/SheetList';
+import SheetAdd from '@/pages/Sheets/SheetAdd';
 import RecordList from '@/pages/Records/RecordList';
 import RecordAdd from '@/pages/Records/RecordAdd';
-import BottomNav from '@/components/layout/BottomNav';
-import { Demo } from './pages/Demo';
-import { SheetAdd } from '@/pages/Sheets/SheetAdd';
-import RecordEdit from './pages/Records/RecordEdit';
+import RecordEdit from '@/pages/Records/RecordEdit';
 
 export default function App() {
 	return (
@@ -18,9 +21,15 @@ export default function App() {
 					element={<Demo />}
 				/>
 
-				{/* Students */}
+				{/* Home */}
 				<Route
 					path="/"
+					element={<Home />}
+				/>
+
+				{/* Students */}
+				<Route
+					path="/student"
 					element={<StudentList />}
 				/>
 

@@ -111,9 +111,9 @@ export default function RecordList() {
 		async function fetchData() {
 			try {
 				const [studentRes, sheetRes, recordRes] = await Promise.all([
-					api.get<Student>('/zindo/students/' + studentId),
-					api.get<Sheet>('/zindo/sheets/' + sheetId),
-					api.get<Record[]>('/zindo/records?sheet__id=' + sheetId),
+					api.get<Student>(`/zindo/students/${studentId}/`),
+					api.get<Sheet>(`/zindo/sheets/${sheetId}/`),
+					api.get<Record[]>(`/zindo/records/?sheet__id=${sheetId}`),
 				]);
 
 				// fetch data from response
@@ -137,7 +137,7 @@ export default function RecordList() {
 
 	return (
 		<div className="pt-16">
-			<TopBar title={`학습상황기록 - ${student?.name}`} />
+			<TopBar title={`학습상황기록지`} />
 
 			<div className="p-4 space-y-3">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
@@ -151,6 +151,11 @@ export default function RecordList() {
 							일일 학습 목표:{' '}
 							{sheet?.pace ? `${sheet.pace}페이지` : '지정되지 않음'}
 						</p>
+						{!sheet?.pace && (
+							<p className="text-xs text-muted-foreground">
+								일일 학습 목표를 지정해주세요!
+							</p>
+						)}
 					</div>
 
 					{/* Dropdown menu */}

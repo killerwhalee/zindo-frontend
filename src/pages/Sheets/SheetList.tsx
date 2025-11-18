@@ -57,8 +57,12 @@ export default function SheetList() {
 
 	return (
 		<div className="pt-16">
-			<TopBar title={`학습상황기록 - ${student?.name}`} />
+			<TopBar title={`학습상황기록지 목록`} />
 			<div className="p-4 space-y-3">
+				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+					{student?.name} ({student?.grade}학년)
+				</h3>
+
 				<Accordion
 					type="single"
 					collapsible
@@ -76,9 +80,14 @@ export default function SheetList() {
 										<CardHeader className="pt-6">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
-												{sheet.textbook_detail.subject}
-												<Separator />
-												ISBN {sheet.textbook_detail.isbn}
+												{sheet.textbook_detail.subject} |{' '}
+												{sheet.is_recorded ? (
+													<span className="text-blue-400">오늘 기록 있음</span>
+												) : (
+													<span className="text-orange-400">
+														오늘 기록 없음
+													</span>
+												)}
 											</CardDescription>
 										</CardHeader>
 										<CardFooter className="gap-3 py-6">

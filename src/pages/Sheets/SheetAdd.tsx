@@ -42,7 +42,7 @@ const formSchema = z.object({
 	isbn: z.string().regex(/(97889|97911)\d{8}$/, '잘못된 ISBN입니다!'),
 });
 
-export function SheetAdd() {
+export default function SheetAdd() {
 	// Get query params
 	const { studentId } = useParams();
 

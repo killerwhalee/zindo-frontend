@@ -6,5 +6,6 @@ export interface Sheet {
     student_detail: Student;
     textbook_detail: TextBook;
     pace: number;
+    is_recorded: boolean;
     is_finished: boolean;
 }
