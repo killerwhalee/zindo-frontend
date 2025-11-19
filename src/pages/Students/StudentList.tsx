@@ -69,11 +69,16 @@ export default function StudentList() {
 							<CardTitle>{student.name}</CardTitle>
 							<CardDescription>
 								{student.grade}학년 |{' '}
-								{student.is_recorded ? (
-									<span className="text-blue-400">오늘 학습 완료</span>
-								) : (
-									<span className="text-orange-400">오늘 학습 미완료</span>
-								)}
+								<span
+									className={
+										student.count_on_progress > student.count_recorded
+											? 'text-orange-400'
+											: 'text-blue-400'
+									}
+								>
+									오늘 {student.count_on_progress}개 중 {student.count_recorded}개
+									완료
+								</span>
 							</CardDescription>
 							<CardAction>
 								<Link to={`/student/${student.id}`}>
