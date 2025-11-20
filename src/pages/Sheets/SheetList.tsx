@@ -98,7 +98,10 @@ export default function SheetList() {
 									</div>
 									<CardContent className="grow-1 px-0">
 										<img
-											src={sheet.textbook_detail.image}
+											src={
+												sheet.textbook_detail.image ||
+												'https://picsum.photos/210/300/?blur'
+											}
 											alt="Book Cover"
 											className="size-full rounded-r-xl"
 										/>

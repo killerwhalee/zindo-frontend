@@ -1,4 +1,14 @@
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Controller, useForm } from 'react-hook-form';
+
+import isbnSample from '@/assets/isbn-sample.png';
+import type { TextBook } from '@/components/types';
+import api from '@/lib/api';
+
+// ui components
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
 import {
@@ -7,17 +17,19 @@ import {
 	FieldGroup,
 	FieldLabel,
 } from '@/components/ui/field';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Controller, useForm } from 'react-hook-form';
 import {
 	InputGroup,
 	InputGroupAddon,
 	InputGroupButton,
 	InputGroupInput,
 } from '@/components/ui/input-group';
-
-import isbn_sample from '@/assets/isbn-sample.png';
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from '@/components/ui/dialog';
 import {
 	Card,
 	CardContent,
@@ -26,29 +38,41 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { useState } from 'react';
-import type { TextBook } from '@/components/types';
-import api from '@/lib/api';
-import { Separator } from '@/components/ui/separator';
 import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from '@/components/ui/dialog';
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
-const formSchema = z.object({
+const searchSchema = z.object({
+	mode: z.literal('search'),
 	isbn: z.string().regex(/(97889|97911)\d{8}$/, '잘못된 ISBN입니다!'),
+	name: z.string().optional(),
+	subject: z.string().optional(),
+	image: z.string().optional(),
 });
+
+const manualSchema = z.object({
+	mode: z.literal('manual'),
+	isbn: z.string().optional(),
+	name: z.string().min(1, '교재명을 입력해 주세요.'),
+	subject: z.string().min(1, '과목을 입력해 주세요.'),
+	image: z.string().optional(),
+});
+
+const formSchema = z.discriminatedUnion('mode', [searchSchema, manualSchema]);
 
 export default function SheetAdd() {
 	// Get query params
 	const { studentId } = useParams();
 
 	// State for textbook search
-	const [textBook, setTextBook] = useState<TextBook | null>(null);
+	const [manualMode, setManualMode] = useState(false);
 	const [notFound, setNotFound] = useState(false);
+	const [textBook, setTextBook] = useState<TextBook | null>(null);
 
 	// State for dialog
 	const [open, setOpen] = useState(false);
@@ -57,20 +81,32 @@ export default function SheetAdd() {
 	// Use zod form for validation
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
+		mode: 'onChange',
 		defaultValues: {
+			mode: 'search',
 			isbn: '',
+			name: '',
+			subject: '',
+			image: '',
 		},
 	});
-
-	/**
-	 * Function to run after submission
-	 */
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
-			await api.post('/zindo/sheets/', {
-				isbn: values.isbn,
-				student: studentId,
-			});
+			if (manualMode) {
+				// manual submission
+				await api.post('/zindo/sheets/', {
+					student: studentId,
+					name: values.name,
+					subject: values.subject,
+				});
+			} else {
+				// isbn search submission
+				await api.post('/zindo/sheets/', {
+					student: studentId,
+					isbn: values.isbn,
+				});
+			}
+
 			setIsSuccess(true);
 		} catch (err) {
 			console.error('Failed to post data:', err);
@@ -80,14 +116,12 @@ export default function SheetAdd() {
 		}
 	}
 
-	/**
-	 * Function to search book from isbn input
-	 */
 	async function handleSearch() {
 		const isbn = form.getValues('isbn');
 		if (!isbn) return;
 
 		setTextBook(null);
+		setNotFound(false);
 
 		try {
 			const res = await api.get(`/zindo/textbooks/search?isbn=${isbn}`);
@@ -96,7 +130,7 @@ export default function SheetAdd() {
 			if (!data || Object.keys(data).length === 0) {
 				setNotFound(true);
 			} else {
-				setTextBook(res.data);
+				setTextBook(data);
 			}
 		} catch (err) {
 			console.error('Failed to search book:', err);
@@ -114,83 +148,96 @@ export default function SheetAdd() {
 				<form onSubmit={form.handleSubmit(onSubmit)}>
 					<Card>
 						<CardHeader>
-							{!textBook ? (
+							{!manualMode ? (
 								<>
 									<CardTitle>교재 검색</CardTitle>
-									<CardDescription>
-										책 뒷면의 바코드로 교재를 검색할 수 있습니다.
-									</CardDescription>
+									<CardDescription>ISBN으로 교재를 검색합니다.</CardDescription>
 								</>
 							) : (
 								<>
-									<CardTitle>교재 검색 결과</CardTitle>
-									<CardDescription>교재가 검색되었습니다.</CardDescription>
+									<CardTitle>수동 입력 모드</CardTitle>
+									<CardDescription>
+										ISBN이 없는 경우 교재 정보를 직접 입력합니다.
+									</CardDescription>
 								</>
 							)}
 						</CardHeader>
+
 						<CardContent>
-							{!textBook ? (
+							{/* isbn search mode */}
+							{!manualMode && !textBook && (
 								<>
 									<img
-										src={isbn_sample}
+										src={isbnSample}
 										alt="isbn sample"
 									/>
+
 									<FieldGroup>
-										<Controller
-											name="isbn"
-											control={form.control}
-											render={({ field, fieldState }) => (
-												<Field>
-													<FieldLabel>
-														바코드 아래 13자리 숫자를 입력해 주세요.
-													</FieldLabel>
-													<InputGroup>
-														<InputGroupInput
-															{...field}
-															id="sheet-form-isbn"
-															placeholder="9788940803561"
-															onChange={(e) => {
-																field.onChange(e);
-																form.trigger('isbn');
-																setNotFound(false);
-															}}
-															onKeyDown={(e) => {
-																if (e.key === 'Enter') {
-																	e.preventDefault();
-																	handleSearch();
-																}
-															}}
-														/>
-														<InputGroupAddon align="inline-end">
-															<InputGroupButton
-																type="button"
-																variant="secondary"
-																onClick={handleSearch}
-																disabled={
-																	fieldState.invalid || !form.getValues('isbn')
-																}
-															>
-																검색
-															</InputGroupButton>
-														</InputGroupAddon>
-													</InputGroup>
-													{fieldState.error && (
-														<FieldError errors={[fieldState.error]} />
-													)}
-													{notFound && (
-														<FieldError>검색 결과가 없습니다.</FieldError>
-													)}
-												</Field>
-											)}
-										/>
+										<Field>
+											<FieldLabel>
+												ISBN <span className="underline">13자리 숫자</span>를
+												입력하세요.
+											</FieldLabel>
+											<Controller
+												name="isbn"
+												control={form.control}
+												render={({ field, fieldState }) => (
+													<>
+														<InputGroup>
+															<InputGroupInput
+																{...field}
+																className='text-sm'
+																placeholder="9788940803561"
+																onChange={(e) => {
+																	field.onChange(e);
+																	form.trigger('isbn');
+																	setNotFound(false);
+																}}
+																onKeyDown={(e) => {
+																	if (e.key === 'Enter') {
+																		e.preventDefault();
+																		handleSearch();
+																	}
+																}}
+															/>
+
+															<InputGroupAddon align="inline-end">
+																<InputGroupButton
+																	type="button"
+																	variant="secondary"
+																	onClick={handleSearch}
+																	disabled={
+																		fieldState.invalid ||
+																		!form.getValues('isbn')
+																	}
+																>
+																	검색
+																</InputGroupButton>
+															</InputGroupAddon>
+														</InputGroup>
+
+														{fieldState.error && (
+															<FieldError errors={[fieldState.error]} />
+														)}
+														{notFound && (
+															<FieldError>검색 결과가 없습니다.</FieldError>
+														)}
+													</>
+												)}
+											/>
+										</Field>
 									</FieldGroup>
 								</>
-							) : (
+							)}
+
+							{/* isbn search result */}
+							{!manualMode && textBook && (
 								<>
 									<img
 										src={textBook.image}
 										alt="Book Cover"
 									/>
+
 									<div className="py-3">
 										{textBook.name}
 										<Separator />
@@ -198,19 +245,134 @@ export default function SheetAdd() {
 									</div>
 								</>
 							)}
+
+							{/* manual mode */}
+							{manualMode && (
+								<div className="space-y-4">
+									<FieldGroup>
+										<Field>
+											<FieldLabel>교재명</FieldLabel>
+											<Controller
+												name="name"
+												control={form.control}
+												render={({ field }) => (
+													<InputGroup>
+														<InputGroupInput
+															{...field}
+															className='text-sm'
+															placeholder="디딤돌 초등 수학 1-3 기본편"
+														/>
+													</InputGroup>
+												)}
+											/>
+										</Field>
+
+										<Field>
+											<FieldLabel>과목</FieldLabel>
+											<Controller
+												name="subject"
+												control={form.control}
+												render={({ field }) => (
+													<Select
+														onValueChange={field.onChange}
+														defaultValue={field.value}
+													>
+														<SelectTrigger className="w-full">
+															<SelectValue placeholder="과목을 선택하세요" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="국어">국어</SelectItem>
+															<SelectItem value="수학">수학</SelectItem>
+															<SelectItem value="영어">영어</SelectItem>
+															<SelectItem value="과학">과학</SelectItem>
+															<SelectItem value="기타">기타</SelectItem>
+														</SelectContent>
+													</Select>
+												)}
+											/>
+										</Field>
+									</FieldGroup>
+								</div>
+							)}
 						</CardContent>
 
 						<CardFooter>
-							<div className="space-x-3">
-								{textBook && (
+							<div className="space-y-2 w-full ">
+								{/* isbn search mode */}
+								{!manualMode && !textBook && (
 									<>
-										<Button type="submit">추가하기!</Button>
+										<div className="my-4 space-y-2">
+											<p className="text-sm text-muted-foreground">
+												교재에 ISBN이 없나요?
+											</p>
+											<Button
+												type="button"
+												variant="outline"
+												className="w-full"
+												onClick={() => {
+													setManualMode(true);
+													form.setValue('mode', 'manual');
+												}}
+											>
+												ISBN 없이 직접 입력하기
+											</Button>
+										</div>
+									</>
+								)}
+
+								{/* isbn search result */}
+								{!manualMode && textBook && (
+									<>
+										<div className="my-4 space-y-2">
+											<p className="text-sm text-muted-foreground">
+												찾는 교재가 아닌가요?
+											</p>
+											<Button
+												variant="outline"
+												type="button"
+												className="w-full"
+												onClick={() => setTextBook(null)}
+											>
+												다시 검색
+											</Button>
+										</div>
+
 										<Button
-											variant="outline"
-											type="button"
-											onClick={() => setTextBook(null)}
+											type="submit"
+											className="w-full"
+											disabled={!form.formState.isValid}
 										>
-											다시 검색
+											추가하기!
+										</Button>
+									</>
+								)}
+
+								{/* manual mode */}
+								{manualMode && (
+									<>
+										<div className="my-4 space-y-2">
+											<p className="text-sm text-muted-foreground">
+												다시 보니 교재에 ISBN이 있었나요?
+											</p>
+											<Button
+												type="button"
+												variant="outline"
+												className="w-full"
+												onClick={() => {
+													setManualMode(false);
+													form.setValue('mode', 'search');
+												}}
+											>
+												ISBN 검색 모드로 돌아가기
+											</Button>
+										</div>
+
+										<Button
+											type="submit"
+											className="w-full"
+											disabled={!form.formState.isValid}
+										>
+											추가하기!
 										</Button>
 									</>
 								)}
@@ -240,7 +402,6 @@ export default function SheetAdd() {
 									<Button
 										onClick={() => {
 											setOpen(false);
-											// Navigate back to the sheet list
 											window.history.back();
 										}}
 									>
@@ -251,7 +412,8 @@ export default function SheetAdd() {
 						) : (
 							<div className="space-y-3">
 								<p className="text-center">
-									기록지 등록에 실패했습니다. <br />
+									기록지 등록에 실패했습니다.
+									<br />
 									잠시 후 다시 시도해 주세요.
 								</p>
 								<DialogFooter>

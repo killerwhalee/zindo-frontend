@@ -76,8 +76,8 @@ export default function StudentList() {
 											: 'text-blue-400'
 									}
 								>
-									오늘 {student.count_on_progress}개 중 {student.count_recorded}개
-									완료
+									오늘 {student.count_on_progress}개 중 {student.count_recorded}
+									개 완료
 								</span>
 							</CardDescription>
 							<CardAction>
