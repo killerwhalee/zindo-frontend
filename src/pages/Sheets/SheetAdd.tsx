@@ -186,7 +186,7 @@ export default function SheetAdd() {
 														<InputGroup>
 															<InputGroupInput
 																{...field}
-																className='text-sm'
+																className="text-sm"
 																placeholder="9788940803561"
 																onChange={(e) => {
 																	field.onChange(e);
@@ -259,7 +259,7 @@ export default function SheetAdd() {
 													<InputGroup>
 														<InputGroupInput
 															{...field}
-															className='text-sm'
+															className="text-sm"
 															placeholder="디딤돌 초등 수학 1-3 기본편"
 														/>
 													</InputGroup>
@@ -340,7 +340,6 @@ export default function SheetAdd() {
 										<Button
 											type="submit"
 											className="w-full"
-											disabled={!form.formState.isValid}
 										>
 											추가하기!
 										</Button>
