@@ -24,8 +24,22 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 import { DialogTrigger } from '@radix-ui/react-dialog';
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from '@/components/ui/input-group';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
 
 const formSchema = z.object({
+	date: z.date(),
 	start: z
 		.number('숫자를 입력하세요!')
 		.min(0, '페이지 수는 0보다 커야 합니다!!'),
@@ -40,6 +54,9 @@ export default function RecordEdit() {
 	// State for record fetching
 	const [record, setRecord] = useState<Record | null>(null);
 	const [loading, setLoading] = useState(true);
+
+	// State for calendar popover
+	const [openCalendar, setOpenCalendar] = useState(false);
 
 	// State for dialog
 	const [openPatch, setOpenPatch] = useState(false);
@@ -57,6 +74,7 @@ export default function RecordEdit() {
 	async function editRecord(data: z.infer<typeof formSchema>) {
 		try {
 			await api.patch(`/zindo/records/${recordId}/`, {
+				created_at: data.date,
 				progress: {
 					type: 'range',
 					start: data.start,
@@ -101,6 +119,7 @@ export default function RecordEdit() {
 	useEffect(() => {
 		if (record) {
 			form.reset({
+				date: new Date(record?.created_at),
 				start: record?.progress.start,
 				end: record?.progress.end,
 				note: record?.note ?? undefined,
@@ -125,6 +144,82 @@ export default function RecordEdit() {
 					onSubmit={form.handleSubmit(editRecord)}
 				>
 					<FieldGroup>
+						<Controller
+							name="date"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<Field>
+									<FieldLabel htmlFor="record-write-form-date">
+										학습일
+									</FieldLabel>
+									<div className="flex flex-row">
+										<InputGroup>
+											<InputGroupInput
+												{...field}
+												id="record-write-form-date"
+												value={
+													field.value ? field.value.toLocaleDateString() : ''
+												}
+												onChange={(e) => {
+													const parsed = new Date(e.target.value);
+
+													if (!isNaN(parsed.getTime())) {
+														field.onChange(parsed);
+													}
+												}}
+											/>
+
+											<InputGroupAddon align="inline-end">
+												<Popover
+													open={openCalendar}
+													onOpenChange={setOpenCalendar}
+												>
+													<PopoverTrigger asChild>
+														<InputGroupButton variant="ghost">
+															<CalendarIcon />
+														</InputGroupButton>
+													</PopoverTrigger>
+													<PopoverContent
+														className="w-auto p-0"
+														align="end"
+														alignOffset={-6}
+														sideOffset={10}
+													>
+														<Calendar
+															mode="single"
+															selected={field.value}
+															onSelect={(selectedDate) => {
+																if (!selectedDate) return;
+
+																const currentDate = new Date(
+																	record ? record.created_at : ''
+																);
+																const updatedDate = new Date(selectedDate);
+
+																updatedDate.setHours(
+																	currentDate.getHours(),
+																	currentDate.getMinutes(),
+																	currentDate.getSeconds(),
+																	currentDate.getMilliseconds()
+																);
+
+																field.onChange(updatedDate);
+																setOpenCalendar(false);
+															}}
+														/>
+													</PopoverContent>
+												</Popover>
+											</InputGroupAddon>
+										</InputGroup>
+									</div>
+
+									{fieldState.invalid && (
+										<FieldError errors={[fieldState.error]} />
+									)}
+								</Field>
+							)}
+						/>
+
 						<div className="grid grid-cols-2 gap-4">
 							<Controller
 								name="start"
@@ -153,7 +248,8 @@ export default function RecordEdit() {
 										)}
 									</Field>
 								)}
-							></Controller>
+							/>
+
 							<Controller
 								name="end"
 								control={form.control}
@@ -181,7 +277,7 @@ export default function RecordEdit() {
 										)}
 									</Field>
 								)}
-							></Controller>
+							/>
 						</div>
 
 						<Controller
@@ -203,7 +299,7 @@ export default function RecordEdit() {
 									)}
 								</Field>
 							)}
-						></Controller>
+						/>
 
 						<div className="grid grid-cols-2 gap-4">
 							<Field>

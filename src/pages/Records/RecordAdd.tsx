@@ -12,7 +12,7 @@ import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Controller, useForm } from 'react-hook-form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import { CalendarIcon, InfoIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Sheet, Record } from '@/components/types';
 import api from '@/lib/api';
@@ -24,8 +24,21 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from '@/components/ui/dialog';
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupInput,
+} from '@/components/ui/input-group';
 
 const formSchema = z.object({
+	date: z.date(),
 	start: z
 		.number('숫자를 입력하세요!')
 		.min(0, '페이지 수는 0보다 커야 합니다!!'),
@@ -42,6 +55,9 @@ export default function RecordAdd() {
 	const [record, setRecord] = useState<Record | null>(null);
 	const [loading, setLoading] = useState(true);
 
+	// State for calendar popover
+	const [openCalendar, setOpenCalendar] = useState(false);
+
 	// State for dialog
 	const [open, setOpen] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
@@ -49,6 +65,9 @@ export default function RecordAdd() {
 	// Use zod form for validation
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
+		defaultValues: {
+			date: new Date(),
+		},
 	});
 
 	/**
@@ -58,6 +77,7 @@ export default function RecordAdd() {
 		try {
 			await api.post('/zindo/records/', {
 				sheet: Number(sheetId),
+				created_at: data.date,
 				progress: {
 					type: 'range',
 					start: data.start,
@@ -130,6 +150,80 @@ export default function RecordAdd() {
 					onSubmit={form.handleSubmit(onSubmit)}
 				>
 					<FieldGroup>
+						<Controller
+							name="date"
+							control={form.control}
+							render={({ field, fieldState }) => (
+								<Field>
+									<FieldLabel htmlFor="record-write-form-date">
+										학습일
+									</FieldLabel>
+									<div className="flex flex-row">
+										<InputGroup>
+											<InputGroupInput
+												{...field}
+												id="record-write-form-date"
+												value={
+													field.value ? field.value.toLocaleDateString() : ''
+												}
+												onChange={(e) => {
+													const parsed = new Date(e.target.value);
+
+													if (!isNaN(parsed.getTime())) {
+														field.onChange(parsed);
+													}
+												}}
+											/>
+
+											<InputGroupAddon align="inline-end">
+												<Popover
+													open={openCalendar}
+													onOpenChange={setOpenCalendar}
+												>
+													<PopoverTrigger asChild>
+														<InputGroupButton variant="ghost">
+															<CalendarIcon />
+														</InputGroupButton>
+													</PopoverTrigger>
+													<PopoverContent
+														className="w-auto p-0"
+														align="end"
+														alignOffset={-6}
+														sideOffset={10}
+													>
+														<Calendar
+															mode="single"
+															selected={field.value}
+															onSelect={(selectedDate) => {
+																if (!selectedDate) return;
+
+																const now = new Date();
+																const updatedDate = new Date(selectedDate);
+
+																updatedDate.setHours(
+																	now.getHours(),
+																	now.getMinutes(),
+																	now.getSeconds(),
+																	now.getMilliseconds()
+																);
+
+																field.onChange(updatedDate);
+																setOpenCalendar(false);
+															}}
+														/>
+													</PopoverContent>
+												</Popover>
+											</InputGroupAddon>
+										</InputGroup>
+									</div>
+
+									{fieldState.invalid && (
+										<FieldError errors={[fieldState.error]} />
+									)}
+								</Field>
+							)}
+						/>
+
 						<div className="grid grid-cols-2 gap-4">
 							<Controller
 								name="start"
@@ -160,7 +254,8 @@ export default function RecordAdd() {
 										)}
 									</Field>
 								)}
-							></Controller>
+							/>
+
 							<Controller
 								name="end"
 								control={form.control}
@@ -192,7 +287,7 @@ export default function RecordAdd() {
 										)}
 									</Field>
 								)}
-							></Controller>
+							/>
 						</div>
 
 						<Controller
@@ -214,7 +309,7 @@ export default function RecordAdd() {
 									)}
 								</Field>
 							)}
-						></Controller>
+						/>
 
 						<Field>
 							<Button
