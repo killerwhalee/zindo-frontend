@@ -1,15 +1,16 @@
+import { lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import BottomNav from '@/components/layout/BottomNav';
 
 // Pages
 import Demo from '@/pages/Demo';
-import Home from '@/pages/Home';
-import StudentList from '@/pages/Students/StudentList';
-import SheetList from '@/pages/Sheets/SheetList';
-import SheetAdd from '@/pages/Sheets/SheetAdd';
-import RecordList from '@/pages/Records/RecordList';
-import RecordAdd from '@/pages/Records/RecordAdd';
-import RecordEdit from '@/pages/Records/RecordEdit';
+const Home = lazy(() => import('@/pages/Home'));
+const StudentList = lazy(() => import('@/pages/Students/StudentList'));
+const SheetList = lazy(() => import('@/pages/Sheets/SheetList'));
+const SheetAdd = lazy(() => import('@/pages/Sheets/SheetAdd'));
+const RecordList = lazy(() => import('@/pages/Records/RecordList'));
+const RecordAdd = lazy(() => import('@/pages/Records/RecordAdd'));
+const RecordEdit = lazy(() => import('@/pages/Records/RecordEdit'));
 
 export default function App() {
 	return (

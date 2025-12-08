@@ -30,12 +30,6 @@ import {
 	PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupInput,
-} from '@/components/ui/input-group';
 
 const formSchema = z.object({
 	date: z.date(),
@@ -158,65 +152,48 @@ export default function RecordAdd() {
 									<FieldLabel htmlFor="record-write-form-date">
 										학습일
 									</FieldLabel>
-									<div className="flex flex-row">
-										<InputGroup>
-											<InputGroupInput
-												{...field}
+									<Popover
+										open={openCalendar}
+										onOpenChange={setOpenCalendar}
+									>
+										<PopoverTrigger asChild>
+											<Button
+												variant="outline"
 												id="record-write-form-date"
-												value={
-													field.value ? field.value.toLocaleDateString() : ''
-												}
-												onChange={(e) => {
-													const parsed = new Date(e.target.value);
+												className="w-full justify-between"
+											>
+												{field.value
+													? field.value.toLocaleDateString()
+													: '날짜 선택'}
+												<CalendarIcon className="ml-2 h-4 w-4" />
+											</Button>
+										</PopoverTrigger>
+										<PopoverContent
+											className="w-auto overflow-hidden p-0"
+											align="start"
+										>
+											<Calendar
+												mode="single"
+												selected={field.value}
+												onSelect={(selectedDate) => {
+													if (!selectedDate) return;
 
-													if (!isNaN(parsed.getTime())) {
-														field.onChange(parsed);
-													}
+													const now = new Date();
+													const updatedDate = new Date(selectedDate);
+
+													updatedDate.setHours(
+														now.getHours(),
+														now.getMinutes(),
+														now.getSeconds(),
+														now.getMilliseconds()
+													);
+
+													field.onChange(updatedDate);
+													setOpenCalendar(false);
 												}}
 											/>
-
-											<InputGroupAddon align="inline-end">
-												<Popover
-													open={openCalendar}
-													onOpenChange={setOpenCalendar}
-												>
-													<PopoverTrigger asChild>
-														<InputGroupButton variant="ghost">
-															<CalendarIcon />
-														</InputGroupButton>
-													</PopoverTrigger>
-													<PopoverContent
-														className="w-auto p-0"
-														align="end"
-														alignOffset={-6}
-														sideOffset={10}
-													>
-														<Calendar
-															mode="single"
-															selected={field.value}
-															onSelect={(selectedDate) => {
-																if (!selectedDate) return;
-
-																const now = new Date();
-																const updatedDate = new Date(selectedDate);
-
-																updatedDate.setHours(
-																	now.getHours(),
-																	now.getMinutes(),
-																	now.getSeconds(),
-																	now.getMilliseconds()
-																);
-
-																field.onChange(updatedDate);
-																setOpenCalendar(false);
-															}}
-														/>
-													</PopoverContent>
-												</Popover>
-											</InputGroupAddon>
-										</InputGroup>
-									</div>
-
+										</PopoverContent>
+									</Popover>
 									{fieldState.invalid && (
 										<FieldError errors={[fieldState.error]} />
 									)}
