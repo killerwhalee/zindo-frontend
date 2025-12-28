@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
 import type { Student } from '@/components/types';
 import Loading from '@/components/layout/Loading';
+import { ChevronRightIcon } from 'lucide-react';
 
 type Ordering = 'name' | '-admission_date';
 
@@ -35,6 +36,14 @@ export default function StudentList() {
 	useEffect(() => {
 		fetchStudents(ordering);
 	}, [ordering]);
+
+	function convertGrade(grade: number) {
+		if (grade <= 6) return `초등 ${grade}학년`;
+		if (grade <= 9) return `중등 ${grade - 6}학년`;
+		if (grade <= 12) return `고등 ${grade - 12}학년`;
+
+		return '졸업생';
+	}
 
 	if (loading) return <Loading />;
 
@@ -61,32 +70,32 @@ export default function StudentList() {
 
 				{/* Student Cards */}
 				{students.map((student) => (
-					<Card
-						key={student.id}
-						className="w-full max-w-sm"
+					<Link
+						to={`/student/${student.id}`}
+						className="block"
 					>
-						<CardHeader>
-							<CardTitle>{student.name}</CardTitle>
-							<CardDescription>
-								{student.grade}학년 |{' '}
-								<span
-									className={
-										student.count_on_progress > student.count_recorded
-											? 'text-orange-400'
-											: 'text-blue-400'
-									}
-								>
-									오늘 {student.count_on_progress}개 중 {student.count_recorded}
-									개 완료
-								</span>
-							</CardDescription>
-							<CardAction>
-								<Link to={`/student/${student.id}`}>
-									<Button type="button">이동</Button>
-								</Link>
-							</CardAction>
-						</CardHeader>
-					</Card>
+						<Card key={student.id}>
+							<CardHeader>
+								<CardTitle>{student.name}</CardTitle>
+								<CardDescription>
+									{convertGrade(student.grade)} |{' '}
+									<span
+										className={
+											student.count_on_progress > student.count_recorded
+												? 'text-orange-400'
+												: 'text-blue-400'
+										}
+									>
+										오늘 {student.count_on_progress}개 중{' '}
+										{student.count_recorded}개 완료
+									</span>
+								</CardDescription>
+								<CardAction>
+									<ChevronRightIcon />
+								</CardAction>
+							</CardHeader>
+						</Card>
+					</Link>
 				))}
 			</div>
 		</div>

@@ -2,7 +2,6 @@ import {
 	Card,
 	CardContent,
 	CardDescription,
-	CardFooter,
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
@@ -72,12 +71,15 @@ export default function SheetList() {
 						<AccordionTrigger>진행 중인 교재</AccordionTrigger>
 						<AccordionContent className="space-y-3">
 							{sheetsOngoing.map((sheet) => (
-								<Card
-									key={sheet.id}
-									className="max-w-lg py-0 flex-row gap-0"
+								<Link
+									to={`/student/${student?.id}/sheet/${sheet.id}`}
+									className="block"
 								>
-									<div className="min-w-54">
-										<CardHeader className="pt-6">
+									<Card
+										key={sheet.id}
+										className="max-w-lg py-0 flex-row gap-0"
+									>
+										<CardHeader className="py-6 min-w-54">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
 												{sheet.textbook_detail.subject} |{' '}
@@ -90,23 +92,18 @@ export default function SheetList() {
 												)}
 											</CardDescription>
 										</CardHeader>
-										<CardFooter className="gap-3 py-6">
-											<Link to={`/student/${student?.id}/sheet/${sheet.id}`}>
-												<Button type="button">기록지 보기</Button>
-											</Link>
-										</CardFooter>
-									</div>
-									<CardContent className="grow-1 px-0">
-										<img
-											src={
-												sheet.textbook_detail.image ||
-												'https://picsum.photos/210/300/?blur'
-											}
-											alt="Book Cover"
-											className="size-full rounded-r-xl"
-										/>
-									</CardContent>
-								</Card>
+										<CardContent className="grow-1 px-0">
+											<img
+												src={
+													sheet.textbook_detail.image ||
+													'https://picsum.photos/210/300/?blur'
+												}
+												alt="Book Cover"
+												className="size-full rounded-r-xl"
+											/>
+										</CardContent>
+									</Card>
+								</Link>
 							))}
 							{sheetsOngoing.length === 0 && (
 								<div className="text-center">
@@ -119,12 +116,15 @@ export default function SheetList() {
 						<AccordionTrigger>완료된 교재</AccordionTrigger>
 						<AccordionContent className="space-y-3">
 							{sheetsFinished.map((sheet) => (
-								<Card
-									key={sheet.id}
-									className="max-w-lg py-0 flex-row gap-0"
+								<Link
+									to={`/student/${student?.id}/sheet/${sheet.id}`}
+									className="block"
 								>
-									<div className="min-w-54">
-										<CardHeader className="pt-6">
+									<Card
+										key={sheet.id}
+										className="max-w-lg py-0 flex-row gap-0"
+									>
+										<CardHeader className="py-6 min-w-54">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
 												{sheet.textbook_detail.subject}
@@ -132,20 +132,15 @@ export default function SheetList() {
 												ISBN {sheet.textbook_detail.isbn}
 											</CardDescription>
 										</CardHeader>
-										<CardFooter className="gap-3 py-6">
-											<Link to={`/student/${student?.id}/sheet/${sheet.id}`}>
-												<Button type="button">기록지 보기</Button>
-											</Link>
-										</CardFooter>
-									</div>
-									<CardContent className="grow-1 px-0">
-										<img
-											src={sheet.textbook_detail.image}
-											alt="Book Cover"
-											className="size-full rounded-r-xl"
-										/>
-									</CardContent>
-								</Card>
+										<CardContent className="grow-1 px-0">
+											<img
+												src={sheet.textbook_detail.image}
+												alt="Book Cover"
+												className="size-full rounded-r-xl"
+											/>
+										</CardContent>
+									</Card>
+								</Link>
 							))}
 							{sheetsFinished.length === 0 && (
 								<div className="text-center">
