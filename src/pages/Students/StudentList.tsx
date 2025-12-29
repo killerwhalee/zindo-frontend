@@ -13,10 +13,12 @@ import TopBar from '@/components/layout/TopBar';
 import type { Student } from '@/components/types';
 import Loading from '@/components/layout/Loading';
 import { ChevronRightIcon } from 'lucide-react';
+import { convertGrade } from '@/lib/utils';
 
 type Ordering = 'name' | '-admission_date';
 
 export default function StudentList() {
+	// State for API call
 	const [students, setStudents] = useState<Student[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [ordering, setOrdering] = useState<Ordering>('name');
@@ -36,14 +38,6 @@ export default function StudentList() {
 	useEffect(() => {
 		fetchStudents(ordering);
 	}, [ordering]);
-
-	function convertGrade(grade: number) {
-		if (grade <= 6) return `초등 ${grade}학년`;
-		if (grade <= 9) return `중등 ${grade - 6}학년`;
-		if (grade <= 12) return `고등 ${grade - 12}학년`;
-
-		return '졸업생';
-	}
 
 	if (loading) return <Loading />;
 
@@ -71,10 +65,11 @@ export default function StudentList() {
 				{/* Student Cards */}
 				{students.map((student) => (
 					<Link
-						to={`/student/${student.id}`}
+						to={`/sheet/?studentId=${student.id}`}
 						className="block"
+						key={student.id}
 					>
-						<Card key={student.id}>
+						<Card>
 							<CardHeader>
 								<CardTitle>{student.name}</CardTitle>
 								<CardDescription>

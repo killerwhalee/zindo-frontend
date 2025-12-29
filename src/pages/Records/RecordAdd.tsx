@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
 import {
@@ -42,11 +42,12 @@ const formSchema = z.object({
 
 export default function RecordAdd() {
 	// Get query params
-	const { sheetId } = useParams();
+	const [searchParams] = useSearchParams();
+	const sheetId = searchParams.get('sheetId');
 
 	// State for record fetching
-	const [sheet, setSheet] = useState<Sheet | null>(null);
-	const [record, setRecord] = useState<Record | null>(null);
+	const [record, setRecord] = useState<Record>();
+	const [sheet, setSheet] = useState<Sheet>();
 	const [loading, setLoading] = useState(true);
 
 	// State for calendar popover
@@ -94,13 +95,15 @@ export default function RecordAdd() {
 	useEffect(() => {
 		async function fetchData() {
 			try {
-				const [sheetRes, recordsRes] = await Promise.all([
+				const [recordsRes, sheetRes] = await Promise.all([
+					api.get<Record[]>('/zindo/records', {
+						params: { sheet__id: sheetId },
+					}),
 					api.get<Sheet>(`/zindo/sheets/${sheetId}`),
-					api.get<Record[]>(`/zindo/records?sheet__id=${sheetId}`),
 				]);
 
+				setRecord(recordsRes.data.at(0));
 				setSheet(sheetRes.data);
-				setRecord(recordsRes.data.at(0) ?? null);
 			} catch (err) {
 				console.error('Failed to load data:', err);
 			} finally {

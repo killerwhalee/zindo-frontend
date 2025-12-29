@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
 	Table,
 	TableBody,
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
-import type { Student, Record, Sheet } from '@/components/types';
+import type { Record, Sheet } from '@/components/types';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import Loading from '@/components/layout/Loading';
@@ -47,12 +47,12 @@ import { DialogDescription } from '@radix-ui/react-dialog';
 
 export default function RecordList() {
 	// Get query params
-	const { studentId, sheetId } = useParams();
+	const [searchParams] = useSearchParams();
+	const sheetId = searchParams.get('sheetId');
 
 	// State for record fetching
-	const [student, setStudent] = useState<Student | null>(null);
-	const [sheet, setSheet] = useState<Sheet | null>(null);
 	const [records, setRecords] = useState<Record[]>([]);
+	const [sheet, setSheet] = useState<Sheet>();
 	const [loading, setLoading] = useState(true);
 
 	// State for pace setting
@@ -110,16 +110,16 @@ export default function RecordList() {
 	useEffect(() => {
 		async function fetchData() {
 			try {
-				const [studentRes, sheetRes, recordRes] = await Promise.all([
-					api.get<Student>(`/zindo/students/${studentId}/`),
+				const [recordsRes, sheetRes] = await Promise.all([
+					api.get<Record[]>('/zindo/records', {
+						params: { sheet__id: sheetId },
+					}),
 					api.get<Sheet>(`/zindo/sheets/${sheetId}/`),
-					api.get<Record[]>(`/zindo/records/?sheet__id=${sheetId}`),
 				]);
 
 				// fetch data from response
-				setStudent(studentRes.data);
+				setRecords(recordsRes.data);
 				setSheet(sheetRes.data);
-				setRecords(recordRes.data);
 
 				// set initial pace
 				setPace(sheetRes.data.pace);
@@ -131,7 +131,7 @@ export default function RecordList() {
 		}
 
 		fetchData();
-	}, [studentId, sheetId, loading]);
+	}, [sheetId, loading]);
 
 	if (loading) return <Loading />;
 
@@ -363,7 +363,7 @@ export default function RecordList() {
 										완료된 기록지입니다.
 									</Button>
 								) : (
-									<Link to={`/student/${student?.id}/sheet/${sheet?.id}/new`}>
+									<Link to={`/record/new?sheetId=${sheet?.id}`}>
 										<Button
 											type="button"
 											size="sm"
@@ -401,11 +401,7 @@ export default function RecordList() {
 										</DropdownMenuTrigger>
 										<DropdownMenuContent>
 											<DropdownMenuItem>
-												<Link
-													to={`/student/${student?.id}/sheet/${sheet?.id}/record/${record.id}/edit`}
-												>
-													수정하기
-												</Link>
+												<Link to={`/record/${record.id}/edit`}>수정하기</Link>
 											</DropdownMenuItem>
 										</DropdownMenuContent>
 									</DropdownMenu>

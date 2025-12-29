@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Controller, useForm } from 'react-hook-form';
-
 import isbnSample from '@/assets/isbn-sample.png';
 import type { TextBook } from '@/components/types';
 import api from '@/lib/api';
@@ -67,12 +66,13 @@ const formSchema = z.discriminatedUnion('mode', [searchSchema, manualSchema]);
 
 export default function SheetAdd() {
 	// Get query params
-	const { studentId } = useParams();
+	const [searchParams] = useSearchParams();
+	const studentId = searchParams.get('studentId');
 
 	// State for textbook search
 	const [manualMode, setManualMode] = useState(false);
 	const [notFound, setNotFound] = useState(false);
-	const [textBook, setTextBook] = useState<TextBook | null>(null);
+	const [textBook, setTextBook] = useState<TextBook>();
 
 	// State for dialog
 	const [open, setOpen] = useState(false);
@@ -90,6 +90,7 @@ export default function SheetAdd() {
 			image: '',
 		},
 	});
+
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			if (manualMode) {
@@ -120,11 +121,13 @@ export default function SheetAdd() {
 		const isbn = form.getValues('isbn');
 		if (!isbn) return;
 
-		setTextBook(null);
+		setTextBook(undefined);
 		setNotFound(false);
 
 		try {
-			const res = await api.get(`/zindo/textbooks/search?isbn=${isbn}`);
+			const res = await api.get('/zindo/textbooks/search', {
+				params: { isbn },
+			});
 			const data = res.data;
 
 			if (!data || Object.keys(data).length === 0) {
@@ -331,7 +334,7 @@ export default function SheetAdd() {
 												variant="outline"
 												type="button"
 												className="w-full"
-												onClick={() => setTextBook(null)}
+												onClick={() => setTextBook(undefined)}
 											>
 												다시 검색
 											</Button>

@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { type Student, type Sheet } from '@/components/types';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import Loading from '@/components/layout/Loading';
 import {
@@ -19,11 +19,15 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from '@/components/ui/accordion';
+import { convertGrade } from '@/lib/utils';
 
 export default function SheetList() {
-	const { studentId } = useParams();
+	// Get query params
+	const [searchParams] = useSearchParams();
+	const studentId = searchParams.get('studentId') || '';
 
-	const [student, setStudent] = useState<Student | null>(null);
+	// State for API call
+	const [student, setStudent] = useState<Student>();
 	const [sheets, setSheets] = useState<Sheet[]>([]);
 	const [loading, setLoading] = useState(true);
 
@@ -32,8 +36,10 @@ export default function SheetList() {
 		async function fetchData() {
 			try {
 				const [studentRes, sheetRes] = await Promise.all([
-					api.get<Student>('/zindo/students/' + studentId),
-					api.get<Sheet[]>('/zindo/sheets?student__id=' + studentId),
+					api.get<Student>(`/zindo/students/${studentId}`),
+					api.get<Sheet[]>('/zindo/sheets', {
+						params: { student__id: studentId },
+					}),
 				]);
 
 				setStudent(studentRes.data);
@@ -59,7 +65,7 @@ export default function SheetList() {
 			<TopBar title={`학습상황기록지 목록`} />
 			<div className="p-4 space-y-3">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-					{student?.name} ({student?.grade}학년)
+					{student?.name} ({convertGrade(student?.grade || 99)})
 				</h3>
 
 				<Accordion
@@ -72,13 +78,11 @@ export default function SheetList() {
 						<AccordionContent className="space-y-3">
 							{sheetsOngoing.map((sheet) => (
 								<Link
-									to={`/student/${student?.id}/sheet/${sheet.id}`}
+									to={`/record/?sheetId=${sheet.id}`}
 									className="block"
+									key={sheet.id}
 								>
-									<Card
-										key={sheet.id}
-										className="max-w-lg py-0 flex-row gap-0"
-									>
+									<Card className="max-w-lg py-0 flex-row gap-0">
 										<CardHeader className="py-6 min-w-54">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
@@ -117,13 +121,11 @@ export default function SheetList() {
 						<AccordionContent className="space-y-3">
 							{sheetsFinished.map((sheet) => (
 								<Link
-									to={`/student/${student?.id}/sheet/${sheet.id}`}
+									to={`/record/?sheetId=${sheet.id}`}
 									className="block"
+									key={sheet.id}
 								>
-									<Card
-										key={sheet.id}
-										className="max-w-lg py-0 flex-row gap-0"
-									>
+									<Card className="max-w-lg py-0 flex-row gap-0">
 										<CardHeader className="py-6 min-w-54">
 											<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 											<CardDescription>
@@ -155,7 +157,7 @@ export default function SheetList() {
 					type="button"
 					className="w-full"
 				>
-					<Link to={`/student/${student?.id}/new`}>새 교재 추가</Link>
+					<Link to={`/sheet/new?studentId=${student?.id}`}>새 교재 추가</Link>
 				</Button>
 			</div>
 		</div>

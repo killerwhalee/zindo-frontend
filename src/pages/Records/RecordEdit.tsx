@@ -46,7 +46,7 @@ export default function RecordEdit() {
 	const { recordId } = useParams();
 
 	// State for record fetching
-	const [record, setRecord] = useState<Record | null>(null);
+	const [record, setRecord] = useState<Record>();
 	const [loading, setLoading] = useState(true);
 
 	// State for calendar popover
@@ -286,7 +286,7 @@ export default function RecordEdit() {
 								</Button>
 							</Field>
 							<Dialog>
-								<DialogTrigger>
+								<DialogTrigger asChild>
 									<Button
 										type="button"
 										variant="destructive"
