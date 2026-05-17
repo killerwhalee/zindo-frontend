@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { type Student, type Sheet } from '@/components/types';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
 import Loading from '@/components/layout/Loading';
 import {
@@ -20,11 +20,19 @@ import {
 	AccordionTrigger,
 } from '@/components/ui/accordion';
 import { convertGrade } from '@/lib/utils';
+import { MoreHorizontalIcon } from 'lucide-react';
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export default function SheetList() {
 	// Get query params
 	const [searchParams] = useSearchParams();
 	const studentId = searchParams.get('studentId') || '';
+	const navigate = useNavigate();
 
 	// State for API call
 	const [student, setStudent] = useState<Student>();
@@ -62,11 +70,35 @@ export default function SheetList() {
 
 	return (
 		<div className="pt-16">
-			<TopBar title={`학습상황기록지 목록`} />
+			<TopBar title="학습상황기록지 목록" />
 			<div className="p-4 space-y-3">
-				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-					{student?.name} ({convertGrade(student?.grade || 99)})
-				</h3>
+				<div className="flex justify-between items-center">
+					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+						{student?.name} ({convertGrade(student?.grade || 99)})
+					</h3>
+
+					{/* Dropdown menu */}
+					<div>
+						<DropdownMenu modal={false}>
+							<DropdownMenuTrigger asChild>
+								<Button
+									type="button"
+									variant="outline"
+									size="icon-sm"
+								>
+									<MoreHorizontalIcon />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem
+									onSelect={() => navigate(`/student/${studentId}/edit`)}
+								>
+									학생 정보 수정
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				</div>
 
 				<Accordion
 					type="single"

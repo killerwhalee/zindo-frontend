@@ -10,6 +10,8 @@ const Home = lazy(() => import('@/pages/Home'));
 const SignIn = lazy(() => import('@/pages/User/SignIn'));
 const SignUp = lazy(() => import('@/pages/User/SignUp'));
 const StudentList = lazy(() => import('@/pages/Students/StudentList'));
+const StudentAdd = lazy(() => import('@/pages/Students/StudentAdd'));
+const StudentEdit = lazy(() => import('@/pages/Students/StudentEdit'));
 const SheetList = lazy(() => import('@/pages/Sheets/SheetList'));
 const SheetAdd = lazy(() => import('@/pages/Sheets/SheetAdd'));
 const RecordList = lazy(() => import('@/pages/Records/RecordList'));
@@ -51,8 +53,14 @@ export default function App() {
 						index
 						element={<StudentList />}
 					/>
-					<Route path="new" />
-					<Route path=":studentId/edit" />
+					<Route
+						path="new"
+						element={<StudentAdd />}
+					/>
+					<Route
+						path=":studentId/edit"
+						element={<StudentEdit />}
+					/>
 				</Route>
 
 				{/* Sheet */}

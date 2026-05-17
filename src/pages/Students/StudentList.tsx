@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import TopBar from '@/components/layout/TopBar';
 import type { Student } from '@/components/types';
 import Loading from '@/components/layout/Loading';
-import { ChevronRightIcon } from 'lucide-react';
+import { ChevronRightIcon, PlusIcon } from 'lucide-react';
 import { convertGrade } from '@/lib/utils';
 
 type Ordering = 'name' | '-admission_date';
@@ -46,8 +46,12 @@ export default function StudentList() {
 			<TopBar title="아동 목록" />
 
 			<div className="p-4 space-y-3">
+				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+					아동 목록
+				</h3>
+
 				{/* Filter Buttons */}
-				<div className="flex gap-4">
+				<div className="flex gap-4 items-center">
 					<Button
 						variant={ordering === 'name' ? 'default' : 'outline'}
 						onClick={() => setOrdering('name')}
@@ -60,6 +64,15 @@ export default function StudentList() {
 					>
 						학년순
 					</Button>
+					<Link
+						to="/student/new"
+						className="ml-auto"
+					>
+						<Button variant="outline">
+							아동 추가
+							<PlusIcon />
+						</Button>
+					</Link>
 				</div>
 
 				{/* Student Cards */}
