@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Controller, useForm } from 'react-hook-form';
-import { BrowserMultiFormatReader } from '@zxing/library';
+import { BarcodeFormat, BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
 import { CameraIcon } from 'lucide-react';
 import isbnSample from '@/assets/isbn-sample.png';
 import type { TextBook } from '@/components/types';
@@ -107,15 +107,33 @@ export default function SheetAdd() {
 		setCameraError(undefined);
 		try {
 			const mediaStream = await navigator.mediaDevices.getUserMedia({
-				video: { facingMode: { ideal: 'environment' } },
+				video: {
+					facingMode: { ideal: 'environment' },
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+				},
 				audio: false,
 			});
+
+			// Request continuous autofocus so the camera can focus at close range.
+			// This API is non-standard; ignore silently if unsupported.
+			try {
+				const track = mediaStream.getVideoTracks()[0];
+				await track.applyConstraints({
+					advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet],
+				});
+			} catch {
+				// Not supported on this device — proceed without it
+			}
+
 			setStream(mediaStream);
 			setOpenScanner(true);
 		} catch (err) {
 			const name = err instanceof Error ? err.name : '';
 			if (name === 'NotAllowedError') {
-				setCameraError('카메라 접근 권한이 없습니다. 브라우저 설정에서 카메라를 허용해주세요.');
+				setCameraError(
+					'카메라 접근 권한이 없습니다. 브라우저 설정에서 카메라를 허용해주세요.',
+				);
 			} else if (name === 'SecurityError') {
 				setCameraError('보안 연결(HTTPS)에서만 카메라를 사용할 수 있습니다.');
 			} else {
@@ -136,7 +154,10 @@ export default function SheetAdd() {
 	useEffect(() => {
 		if (!stream || !videoEl || !openScanner) return;
 
-		const reader = new BrowserMultiFormatReader();
+		const hints = new Map<DecodeHintType, unknown>();
+		hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+		hints.set(DecodeHintType.TRY_HARDER, true);
+		const reader = new BrowserMultiFormatReader(hints);
 
 		reader
 			.decodeFromStream(stream, videoEl, async (result) => {
@@ -479,7 +500,7 @@ export default function SheetAdd() {
 							</DialogDescription>
 						</DialogHeader>
 
-						<div className="relative overflow-hidden rounded-lg bg-black aspect-video">
+						<div className="relative overflow-hidden rounded-lg bg-black aspect-[3/4]">
 							<video
 								ref={setVideoEl}
 								className="w-full h-full object-cover"
@@ -487,9 +508,9 @@ export default function SheetAdd() {
 								playsInline
 								muted
 							/>
-							{/* Targeting guide */}
+							{/* EAN-13 guide — wide horizontal bar */}
 							<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-								<div className="w-4/5 h-14 border-2 border-primary rounded-sm shadow-[0_0_0_9999px_rgba(0,0,0,0.4)]" />
+								<div className="w-5/6 h-20 border-2 border-primary rounded-sm shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
 							</div>
 						</div>
 					</DialogContent>
