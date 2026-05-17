@@ -64,6 +64,11 @@ export default function RecordList() {
 	const [isSuccess, setIsSuccess] = useState(false);
 	const [openResult, setOpenResult] = useState(false);
 
+	// State for delete sheet
+	const [openDelete, setOpenDelete] = useState(false);
+	const [openDeleteResult, setOpenDeleteResult] = useState(false);
+	const [isDeleteSuccess, setIsDeleteSuccess] = useState(false);
+
 	async function onSubmitPace() {
 		try {
 			await api.patch(`/zindo/sheets/${sheetId}/`, {
@@ -82,10 +87,10 @@ export default function RecordList() {
 	/**
 	 * Function to run after submission
 	 */
-	async function onSubmitFinish() {
+	async function onSubmitToggleFinish() {
 		try {
 			await api.patch(`/zindo/sheets/${sheetId}/`, {
-				is_finished: true,
+				is_finished: !sheet?.is_finished,
 			});
 			setIsSuccess(true);
 		} catch (err) {
@@ -94,6 +99,19 @@ export default function RecordList() {
 		} finally {
 			setOpenFinish(false);
 			setOpenResult(true);
+		}
+	}
+
+	async function onSubmitDeleteSheet() {
+		try {
+			await api.delete(`/zindo/sheets/${sheetId}/`);
+			setIsDeleteSuccess(true);
+		} catch (err) {
+			console.error('Failed to delete sheet:', err);
+			setIsDeleteSuccess(false);
+		} finally {
+			setOpenDelete(false);
+			setOpenDeleteResult(true);
 		}
 	}
 
@@ -175,7 +193,13 @@ export default function RecordList() {
 									학습 목표 설정
 								</DropdownMenuItem>
 								<DropdownMenuItem onSelect={() => setOpenFinish(true)}>
-									기록 완료 처리
+									{sheet?.is_finished ? '기록 재개' : '기록 완료 처리'}
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									variant="destructive"
+									onSelect={() => setOpenDelete(true)}
+								>
+									기록지 삭제
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>
@@ -254,14 +278,25 @@ export default function RecordList() {
 						>
 							<DialogContent>
 								<DialogHeader>
-									<DialogTitle>기록 완료 처리</DialogTitle>
+									<DialogTitle>
+									{sheet?.is_finished ? '기록 재개' : '기록 완료 처리'}
+								</DialogTitle>
 									<DialogDescription></DialogDescription>
 								</DialogHeader>
 
 								<div className="space-y-3">
 									<p className="text-center">
-										해당 기록지를 완료 처리하겠습니까? <br />
-										완료 처리된 이후에는 수정이 불가합니다.
+										{sheet?.is_finished ? (
+											<>
+												해당 기록지를 다시 진행하겠습니까? <br />
+												재개된 이후에는 기록을 추가할 수 있습니다.
+											</>
+										) : (
+											<>
+												해당 기록지를 완료 처리하겠습니까? <br />
+												완료 처리된 이후에는 기록을 추가할 수 없습니다.
+											</>
+										)}
 									</p>
 									<DialogFooter>
 										<div className="grid grid-cols-2 gap-4">
@@ -275,9 +310,9 @@ export default function RecordList() {
 											</DialogClose>
 											<Button
 												type="button"
-												onClick={onSubmitFinish}
+												onClick={onSubmitToggleFinish}
 											>
-												완료 처리
+												{sheet?.is_finished ? '기록 재개' : '완료 처리'}
 											</Button>
 										</div>
 									</DialogFooter>
@@ -300,13 +335,14 @@ export default function RecordList() {
 								{isSuccess ? (
 									<div className="space-y-3">
 										<p className="text-center">
-											기록지가 성공적으로 완료 처리되었습니다.
+											{sheet?.is_finished
+												? '기록지가 성공적으로 재개되었습니다.'
+												: '기록지가 성공적으로 완료 처리되었습니다.'}
 										</p>
 										<DialogFooter>
 											<Button
 												onClick={() => {
 													setOpenResult(false);
-													// Navigate back to the sheet list
 													window.history.back();
 												}}
 											>
@@ -317,13 +353,97 @@ export default function RecordList() {
 								) : (
 									<div className="space-y-3">
 										<p className="text-center">
-											기록지 완료 처리에 실패했습니다. <br />
+											처리에 실패했습니다. <br />
 											잠시 후 다시 시도해 주세요.
 										</p>
 										<DialogFooter>
 											<Button
 												variant="outline"
 												onClick={() => setOpenResult(false)}
+											>
+												닫기
+											</Button>
+										</DialogFooter>
+									</div>
+								)}
+							</DialogContent>
+						</Dialog>
+
+						{/* Dialog for delete sheet confirmation */}
+						<Dialog
+							open={openDelete}
+							onOpenChange={setOpenDelete}
+						>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>기록지 삭제 💥</DialogTitle>
+									<DialogDescription></DialogDescription>
+								</DialogHeader>
+								<div className="space-y-3">
+									<p className="text-center">
+										기록지를 삭제하시겠습니까? <br />
+										삭제된 기록지와 모든 기록은 복구할 수 없습니다!!
+									</p>
+									<DialogFooter>
+										<div className="grid grid-cols-2 gap-4">
+											<DialogClose>
+												<Button
+													variant="secondary"
+													className="w-full"
+												>
+													취소
+												</Button>
+											</DialogClose>
+											<Button
+												type="button"
+												variant="destructive"
+												onClick={onSubmitDeleteSheet}
+											>
+												삭제
+											</Button>
+										</div>
+									</DialogFooter>
+								</div>
+							</DialogContent>
+						</Dialog>
+
+						{/* Dialog for delete result */}
+						<Dialog
+							open={openDeleteResult}
+							onOpenChange={setOpenDeleteResult}
+						>
+							<DialogContent>
+								<DialogHeader>
+									<DialogTitle>
+										{isDeleteSuccess ? '삭제 완료 🥳' : '삭제 실패 🥺'}
+									</DialogTitle>
+								</DialogHeader>
+								{isDeleteSuccess ? (
+									<div className="space-y-3">
+										<p className="text-center">
+											기록지가 성공적으로 삭제되었습니다.
+										</p>
+										<DialogFooter>
+											<Button
+												onClick={() => {
+													setOpenDeleteResult(false);
+													window.history.back();
+												}}
+											>
+												목록으로 돌아가기
+											</Button>
+										</DialogFooter>
+									</div>
+								) : (
+									<div className="space-y-3">
+										<p className="text-center">
+											기록지 삭제에 실패했습니다. <br />
+											잠시 후 다시 시도해 주세요.
+										</p>
+										<DialogFooter>
+											<Button
+												variant="outline"
+												onClick={() => setOpenDeleteResult(false)}
 											>
 												닫기
 											</Button>
