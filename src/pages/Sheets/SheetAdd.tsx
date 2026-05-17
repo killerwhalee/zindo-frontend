@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Controller, useForm } from 'react-hook-form';
+import { BarcodeFormat, BrowserMultiFormatReader, DecodeHintType } from '@zxing/library';
+import { CameraIcon } from 'lucide-react';
 import isbnSample from '@/assets/isbn-sample.png';
 import type { TextBook } from '@/components/types';
 import api from '@/lib/api';
@@ -25,6 +27,7 @@ import {
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -74,9 +77,15 @@ export default function SheetAdd() {
 	const [notFound, setNotFound] = useState(false);
 	const [textBook, setTextBook] = useState<TextBook>();
 
-	// State for dialog
+	// State for result dialog
 	const [open, setOpen] = useState(false);
 	const [isSuccess, setIsSuccess] = useState(false);
+
+	// Scanner state
+	const [openScanner, setOpenScanner] = useState(false);
+	const [stream, setStream] = useState<MediaStream | null>(null);
+	const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+	const [cameraError, setCameraError] = useState<string>();
 
 	// Use zod form for validation
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -91,23 +100,109 @@ export default function SheetAdd() {
 		},
 	});
 
+	// getUserMedia MUST be called directly inside the click handler on iOS Safari.
+	// Calling it from a useEffect breaks the user-gesture requirement and Safari
+	// silently denies access without any permission prompt.
+	const handleOpenScanner = async () => {
+		setCameraError(undefined);
+		try {
+			const mediaStream = await navigator.mediaDevices.getUserMedia({
+				video: {
+					facingMode: { ideal: 'environment' },
+					width: { ideal: 1920 },
+					height: { ideal: 1080 },
+				},
+				audio: false,
+			});
+
+			// Request continuous autofocus so the camera can focus at close range.
+			// This API is non-standard; ignore silently if unsupported.
+			try {
+				const track = mediaStream.getVideoTracks()[0];
+				await track.applyConstraints({
+					advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet],
+				});
+			} catch {
+				// Not supported on this device — proceed without it
+			}
+
+			setStream(mediaStream);
+			setOpenScanner(true);
+		} catch (err) {
+			const name = err instanceof Error ? err.name : '';
+			if (name === 'NotAllowedError') {
+				setCameraError(
+					'카메라 접근 권한이 없습니다. 브라우저 설정에서 카메라를 허용해주세요.',
+				);
+			} else if (name === 'SecurityError') {
+				setCameraError('보안 연결(HTTPS)에서만 카메라를 사용할 수 있습니다.');
+			} else {
+				setCameraError('카메라를 시작할 수 없습니다.');
+			}
+		}
+	};
+
+	const handleCloseScanner = () => {
+		stream?.getTracks().forEach((t) => t.stop());
+		setStream(null);
+		setOpenScanner(false);
+	};
+
+	// Start decoding once the stream exists AND the video element is in the DOM.
+	// decodeFromStream takes the already-obtained MediaStream so no second
+	// getUserMedia call is needed here.
+	useEffect(() => {
+		if (!stream || !videoEl || !openScanner) return;
+
+		const hints = new Map<DecodeHintType, unknown>();
+		hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.EAN_13]);
+		hints.set(DecodeHintType.TRY_HARDER, true);
+		const reader = new BrowserMultiFormatReader(hints);
+
+		reader
+			.decodeFromStream(stream, videoEl, async (result) => {
+				if (!result) return;
+				reader.reset();
+
+				const isbn = result.getText();
+				form.setValue('isbn', isbn, { shouldValidate: true });
+				setNotFound(false);
+				setTextBook(undefined);
+				setOpenScanner(false);
+				setStream(null);
+
+				try {
+					const res = await api.get('/zindo/textbooks/search', {
+						params: { isbn },
+					});
+					const data = res.data;
+					if (!data || Object.keys(data).length === 0) setNotFound(true);
+					else setTextBook(data);
+				} catch (err) {
+					console.error('Search error:', err);
+				}
+			})
+			.catch((err) => console.error('Scanner error:', err));
+
+		return () => {
+			reader.reset();
+		};
+	}, [stream, videoEl, openScanner, form]);
+
 	async function onSubmit(values: z.infer<typeof formSchema>) {
 		try {
 			if (manualMode) {
-				// manual submission
 				await api.post('/zindo/sheets/', {
 					student: studentId,
 					name: values.name,
 					subject: values.subject,
 				});
 			} else {
-				// isbn search submission
 				await api.post('/zindo/sheets/', {
 					student: studentId,
 					isbn: values.isbn,
 				});
 			}
-
 			setIsSuccess(true);
 		} catch (err) {
 			console.error('Failed to post data:', err);
@@ -129,12 +224,8 @@ export default function SheetAdd() {
 				params: { isbn },
 			});
 			const data = res.data;
-
-			if (!data || Object.keys(data).length === 0) {
-				setNotFound(true);
-			} else {
-				setTextBook(data);
-			}
+			if (!data || Object.keys(data).length === 0) setNotFound(true);
+			else setTextBook(data);
 		} catch (err) {
 			console.error('Failed to search book:', err);
 		}
@@ -178,8 +269,7 @@ export default function SheetAdd() {
 									<FieldGroup>
 										<Field>
 											<FieldLabel>
-												ISBN <span className="underline">13자리 숫자</span>를
-												입력하세요.
+												카메라 버튼으로 바코드를 스캔하거나 직접 입력하세요.
 											</FieldLabel>
 											<Controller
 												name="isbn"
@@ -195,6 +285,7 @@ export default function SheetAdd() {
 																	field.onChange(e);
 																	form.trigger('isbn');
 																	setNotFound(false);
+																	setCameraError(undefined);
 																}}
 																onKeyDown={(e) => {
 																	if (e.key === 'Enter') {
@@ -205,6 +296,13 @@ export default function SheetAdd() {
 															/>
 
 															<InputGroupAddon align="inline-end">
+																<InputGroupButton
+																	type="button"
+																	variant="secondary"
+																	onClick={handleOpenScanner}
+																>
+																	<CameraIcon />
+																</InputGroupButton>
 																<InputGroupButton
 																	type="button"
 																	variant="secondary"
@@ -224,6 +322,9 @@ export default function SheetAdd() {
 														)}
 														{notFound && (
 															<FieldError>검색 결과가 없습니다.</FieldError>
+														)}
+														{cameraError && (
+															<FieldError>{cameraError}</FieldError>
 														)}
 													</>
 												)}
@@ -300,7 +401,7 @@ export default function SheetAdd() {
 						</CardContent>
 
 						<CardFooter>
-							<div className="space-y-2 w-full ">
+							<div className="space-y-2 w-full">
 								{/* isbn search mode */}
 								{!manualMode && !textBook && (
 									<>
@@ -383,7 +484,38 @@ export default function SheetAdd() {
 					</Card>
 				</form>
 
-				{/* dialog */}
+				{/* Barcode scanner dialog */}
+				<Dialog
+					open={openScanner}
+					onOpenChange={(open) => {
+						if (!open) handleCloseScanner();
+					}}
+				>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>바코드 스캔</DialogTitle>
+							<DialogDescription>
+								책 뒷면의 바코드를 화면 중앙에 맞춰주세요.
+							</DialogDescription>
+						</DialogHeader>
+
+						<div className="relative overflow-hidden rounded-lg bg-black aspect-[3/4]">
+							<video
+								ref={setVideoEl}
+								className="w-full h-full object-cover"
+								autoPlay
+								playsInline
+								muted
+							/>
+							{/* EAN-13 guide — wide horizontal bar */}
+							<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+								<div className="w-5/6 h-20 border-2 border-primary rounded-sm shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]" />
+							</div>
+						</div>
+					</DialogContent>
+				</Dialog>
+
+				{/* Result dialog */}
 				<Dialog
 					open={open}
 					onOpenChange={setOpen}
