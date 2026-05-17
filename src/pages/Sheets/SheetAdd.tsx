@@ -269,8 +269,7 @@ export default function SheetAdd() {
 									<FieldGroup>
 										<Field>
 											<FieldLabel>
-												ISBN <span className="underline">13자리 숫자</span>를
-												입력하세요.
+												카메라 버튼으로 바코드를 스캔하거나 직접 입력하세요.
 											</FieldLabel>
 											<Controller
 												name="isbn"
