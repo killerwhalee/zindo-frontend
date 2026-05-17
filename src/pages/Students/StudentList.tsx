@@ -14,6 +14,12 @@ import type { Student } from '@/components/types';
 import Loading from '@/components/layout/Loading';
 import { ChevronRightIcon, PlusIcon } from 'lucide-react';
 import { convertGrade } from '@/lib/utils';
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from '@/components/ui/accordion';
 
 type Ordering = 'name' | '-admission_date';
 
@@ -38,6 +44,9 @@ export default function StudentList() {
 	useEffect(() => {
 		fetchStudents(ordering);
 	}, [ordering]);
+
+	const studentsActive = students.filter((s) => s.is_active);
+	const studentsInactive = students.filter((s) => !s.is_active);
 
 	if (loading) return <Loading />;
 
@@ -75,36 +84,77 @@ export default function StudentList() {
 					</Link>
 				</div>
 
-				{/* Student Cards */}
-				{students.map((student) => (
-					<Link
-						to={`/sheet/?studentId=${student.id}`}
-						className="block"
-						key={student.id}
-					>
-						<Card>
-							<CardHeader>
-								<CardTitle>{student.name}</CardTitle>
-								<CardDescription>
-									{convertGrade(student.grade)} |{' '}
-									<span
-										className={
-											student.count_on_progress > student.count_recorded
-												? 'text-orange-400'
-												: 'text-blue-400'
-										}
-									>
-										오늘 {student.count_on_progress}개 중{' '}
-										{student.count_recorded}개 완료
-									</span>
-								</CardDescription>
-								<CardAction>
-									<ChevronRightIcon />
-								</CardAction>
-							</CardHeader>
-						</Card>
-					</Link>
-				))}
+				<Accordion
+					type="single"
+					collapsible
+					defaultValue="students-active"
+				>
+					<AccordionItem value="students-active">
+						<AccordionTrigger>활성 아동</AccordionTrigger>
+						<AccordionContent className="space-y-3">
+							{studentsActive.map((student) => (
+								<Link
+									to={`/sheet/?studentId=${student.id}`}
+									className="block"
+									key={student.id}
+								>
+									<Card>
+										<CardHeader>
+											<CardTitle>{student.name}</CardTitle>
+											<CardDescription>
+												{convertGrade(student.grade)} |{' '}
+												<span
+													className={
+														student.count_on_progress > student.count_recorded
+															? 'text-orange-400'
+															: 'text-blue-400'
+													}
+												>
+													오늘 {student.count_on_progress}개 중{' '}
+													{student.count_recorded}개 완료
+												</span>
+											</CardDescription>
+											<CardAction>
+												<ChevronRightIcon />
+											</CardAction>
+										</CardHeader>
+									</Card>
+								</Link>
+							))}
+							{studentsActive.length === 0 && (
+								<div className="text-center">활성 아동이 없습니다 🥺</div>
+							)}
+						</AccordionContent>
+					</AccordionItem>
+
+					<AccordionItem value="students-inactive">
+						<AccordionTrigger>보관된 아동</AccordionTrigger>
+						<AccordionContent className="space-y-3">
+							{studentsInactive.map((student) => (
+								<Link
+									to={`/sheet/?studentId=${student.id}`}
+									className="block"
+									key={student.id}
+								>
+									<Card>
+										<CardHeader>
+											<CardTitle>{student.name}</CardTitle>
+											<CardDescription>
+												{convertGrade(student.grade)}
+											</CardDescription>
+											<CardAction>
+												<ChevronRightIcon />
+											</CardAction>
+										</CardHeader>
+									</Card>
+								</Link>
+							))}
+							{studentsInactive.length === 0 && (
+								<div className="text-center">보관된 아동이 없습니다 🥺</div>
+							)}
+						</AccordionContent>
+					</AccordionItem>
+				</Accordion>
 			</div>
 		</div>
 	);
