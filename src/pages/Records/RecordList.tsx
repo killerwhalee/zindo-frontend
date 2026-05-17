@@ -12,13 +12,13 @@ import TopBar from '@/components/layout/TopBar';
 import type { Record, Sheet } from '@/components/types';
 import { useEffect, useState } from 'react';
 import api from '@/lib/api';
-import Loading from '@/components/layout/Loading';
 import {
 	CheckIcon,
 	Minus,
 	MoreHorizontalIcon,
 	Plus,
 	PlusIcon,
+	RefreshCwIcon,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -44,6 +44,8 @@ import {
 	DrawerTitle,
 } from '@/components/ui/drawer';
 import { DialogDescription } from '@radix-ui/react-dialog';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function RecordList() {
 	// Get query params
@@ -58,6 +60,10 @@ export default function RecordList() {
 	// State for pace setting
 	const [openPace, setOpenPace] = useState(false);
 	const [pace, setPace] = useState(4);
+
+	const { pulling, refreshing } = usePullToRefresh(() => setLoading(true));
+
+	const isInitialLoad = loading && !sheet;
 
 	// State for finish sheet
 	const [openFinish, setOpenFinish] = useState(false);
@@ -151,28 +157,41 @@ export default function RecordList() {
 		fetchData();
 	}, [sheetId, loading]);
 
-	if (loading) return <Loading />;
-
 	return (
 		<div className="pt-16">
 			<TopBar title={`학습상황기록지`} />
+			{(pulling || refreshing) && (
+				<div className="flex justify-center py-2">
+					<RefreshCwIcon className={`size-5 text-muted-foreground${refreshing ? ' animate-spin' : ''}`} />
+				</div>
+			)}
 
 			<div className="p-4 space-y-3">
-				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-					{sheet?.textbook_detail.name}
-				</h3>
+				{isInitialLoad ? (
+					<Skeleton className="h-8 w-48" />
+				) : (
+					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+						{sheet?.textbook_detail.name}
+					</h3>
+				)}
 
 				{/* Daily pace display */}
 				<div className="flex justify-between">
 					<div className="content-center">
-						<p>
-							일일 학습 목표:{' '}
-							{sheet?.pace ? `${sheet.pace}페이지` : '지정되지 않음'}
-						</p>
-						{!sheet?.pace && (
-							<p className="text-xs text-muted-foreground">
-								일일 학습 목표를 지정해주세요!
-							</p>
+						{isInitialLoad ? (
+							<Skeleton className="h-9 w-40" />
+						) : (
+							<>
+								<p>
+									일일 학습 목표:{' '}
+									{sheet?.pace ? `${sheet.pace}페이지` : '지정되지 않음'}
+								</p>
+								{!sheet?.pace && (
+									<p className="text-xs text-muted-foreground">
+										일일 학습 목표를 지정해주세요!
+									</p>
+								)}
+							</>
 						)}
 					</div>
 
@@ -468,75 +487,88 @@ export default function RecordList() {
 						</TableRow>
 					</TableHeader>
 					<TableBody>
-						{/* add record button */}
-						<TableRow>
-							<TableCell colSpan={4}>
-								{sheet?.is_finished ? (
-									<Button
-										type="button"
-										size="sm"
-										variant="secondary"
-										className="w-full"
-										disabled
-									>
-										<CheckIcon />
-										완료된 기록지입니다.
-									</Button>
-								) : (
-									<Link to={`/record/new?sheetId=${sheet?.id}`}>
-										<Button
-											type="button"
-											size="sm"
-											variant="secondary"
-											className="w-full"
-										>
-											<PlusIcon />새 기록 작성
-										</Button>
-									</Link>
-								)}
-							</TableCell>
-						</TableRow>
-
-						{records.map((record) => (
-							<TableRow key={record.id}>
-								<TableCell className="font-medium">
-									{record.created_at.slice(0, 10)}
-								</TableCell>
-								<TableCell>
-									{record.progress.start}p ~ {record.progress.end}p
-								</TableCell>
-								<TableCell className="whitespace-normal break-words align-middle">
-									{record.note}
-								</TableCell>
-								<TableCell>
-									<DropdownMenu>
-										<DropdownMenuTrigger asChild>
+						{isInitialLoad ? (
+							Array.from({ length: 5 }, (_, i) => (
+								<TableRow key={i}>
+									<TableCell><Skeleton className="h-4 w-20" /></TableCell>
+									<TableCell><Skeleton className="h-4 w-24" /></TableCell>
+									<TableCell><Skeleton className="h-4 w-28" /></TableCell>
+									<TableCell><Skeleton className="size-8 rounded-md" /></TableCell>
+								</TableRow>
+							))
+						) : (
+							<>
+								{/* add record button */}
+								<TableRow>
+									<TableCell colSpan={4}>
+										{sheet?.is_finished ? (
 											<Button
 												type="button"
-												variant="outline"
-												size="icon-sm"
+												size="sm"
+												variant="secondary"
+												className="w-full"
+												disabled
 											>
-												<MoreHorizontalIcon />
+												<CheckIcon />
+												완료된 기록지입니다.
 											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent>
-											<DropdownMenuItem>
-												<Link to={`/record/${record.id}/edit`}>수정하기</Link>
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
-								</TableCell>
-							</TableRow>
-						))}
-						{records.length === 0 && (
-							<TableRow>
-								<TableCell
-									className="text-center"
-									colSpan={3}
-								>
-									작성된 기록이 아직 없습니다 🥺
-								</TableCell>
-							</TableRow>
+										) : (
+											<Link to={`/record/new?sheetId=${sheet?.id}`}>
+												<Button
+													type="button"
+													size="sm"
+													variant="secondary"
+													className="w-full"
+												>
+													<PlusIcon />새 기록 작성
+												</Button>
+											</Link>
+										)}
+									</TableCell>
+								</TableRow>
+
+								{records.map((record) => (
+									<TableRow key={record.id}>
+										<TableCell className="font-medium">
+											{record.created_at.slice(0, 10)}
+										</TableCell>
+										<TableCell>
+											{record.progress.start}p ~ {record.progress.end}p
+										</TableCell>
+										<TableCell className="whitespace-normal break-words align-middle">
+											{record.note}
+										</TableCell>
+										<TableCell>
+											<DropdownMenu>
+												<DropdownMenuTrigger asChild>
+													<Button
+														type="button"
+														variant="outline"
+														size="icon-sm"
+													>
+														<MoreHorizontalIcon />
+													</Button>
+												</DropdownMenuTrigger>
+												<DropdownMenuContent>
+													<DropdownMenuItem>
+														<Link to={`/record/${record.id}/edit`}>수정하기</Link>
+													</DropdownMenuItem>
+												</DropdownMenuContent>
+											</DropdownMenu>
+										</TableCell>
+									</TableRow>
+								))}
+								{records.length === 0 && (
+									<TableRow>
+										<TableCell
+											className="text-center"
+											colSpan={3}
+										>
+											작성된 기록이 아직 없습니다 🥺
+										</TableCell>
+									</TableRow>
+								)}
+							</>
 						)}
 					</TableBody>
 				</Table>

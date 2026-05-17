@@ -12,7 +12,7 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Separator } from '@/components/ui/separator';
-import Loading from '@/components/layout/Loading';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Accordion,
 	AccordionContent,
@@ -20,7 +20,8 @@ import {
 	AccordionTrigger,
 } from '@/components/ui/accordion';
 import { convertGrade } from '@/lib/utils';
-import { MoreHorizontalIcon } from 'lucide-react';
+import { usePullToRefresh } from '@/lib/usePullToRefresh';
+import { BookIcon, MoreHorizontalIcon, RefreshCwIcon } from 'lucide-react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -66,14 +67,18 @@ function SheetCard({ sheet, finished }: { sheet: Sheet; finished?: boolean }) {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="grow-1 px-0">
-					<img
-						src={
-							sheet.textbook_detail.image ||
-							'https://picsum.photos/210/300/?blur'
-						}
-						alt="Book Cover"
-						className="size-full rounded-r-xl"
-					/>
+					{sheet.textbook_detail.image ? (
+						<img
+							src={sheet.textbook_detail.image}
+							alt="Book Cover"
+							className="size-full rounded-r-xl"
+						/>
+					) : (
+						<div className="size-full rounded-r-xl bg-muted flex flex-col items-center justify-center gap-1 text-muted-foreground">
+							<BookIcon className="size-6" />
+							<span className="text-xs">표지 없음</span>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 		</Link>
@@ -90,6 +95,9 @@ export default function SheetList() {
 	const [student, setStudent] = useState<Student>();
 	const [sheets, setSheets] = useState<Sheet[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [refreshKey, setRefreshKey] = useState(0);
+
+	const { pulling, refreshing } = usePullToRefresh(() => setRefreshKey((k) => k + 1));
 
 	// State for archive/activate dialog
 	const [openAction, setOpenAction] = useState(false);
@@ -117,7 +125,7 @@ export default function SheetList() {
 		}
 
 		fetchData();
-	}, [studentId]);
+	}, [studentId, refreshKey]);
 
 	async function onSubmitAction() {
 		const nextActive = !student?.is_active;
@@ -135,20 +143,29 @@ export default function SheetList() {
 		}
 	}
 
+	const isInitialLoad = loading && !student;
+
 	const sheetsOngoing = sheets.filter((sheet) => !sheet.is_finished);
 	const sheetsFinished = sheets.filter((sheet) => sheet.is_finished);
 	const isActive = student?.is_active ?? true;
 
-	if (loading) return <Loading />;
-
 	return (
 		<div className="pt-16">
 			<TopBar title="학습상황기록지 목록" />
+			{(pulling || refreshing) && (
+				<div className="flex justify-center py-2">
+					<RefreshCwIcon className={`size-5 text-muted-foreground${refreshing ? ' animate-spin' : ''}`} />
+				</div>
+			)}
 			<div className="p-4 space-y-3">
 				<div className="flex justify-between items-center">
-					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-						{student?.name} ({convertGrade(student?.grade || 99)})
-					</h3>
+					{isInitialLoad ? (
+						<Skeleton className="h-8 w-40" />
+					) : (
+						<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+							{student?.name} ({convertGrade(student?.grade || 99)})
+						</h3>
+					)}
 
 					{/* Dropdown menu */}
 					<div>
@@ -282,16 +299,30 @@ export default function SheetList() {
 						<AccordionItem value="sheets-ongoing">
 							<AccordionTrigger>진행 중인 교재</AccordionTrigger>
 							<AccordionContent className="space-y-3">
-								{sheetsOngoing.map((sheet) => (
-									<SheetCard
-										key={sheet.id}
-										sheet={sheet}
-									/>
-								))}
-								{sheetsOngoing.length === 0 && (
-									<div className="text-center">
-										현재 진행 중인 교재가 없습니다 🥺
-									</div>
+								{isInitialLoad ? (
+									Array.from({ length: 3 }, (_, i) => (
+										<Card key={i} className="max-w-lg py-0 flex-row gap-0">
+											<CardHeader className="py-6 min-w-54">
+												<Skeleton className="h-5 w-32" />
+												<Skeleton className="h-4 w-20" />
+											</CardHeader>
+											<Skeleton className="grow-1 rounded-r-xl" />
+										</Card>
+									))
+								) : (
+									<>
+										{sheetsOngoing.map((sheet) => (
+											<SheetCard
+												key={sheet.id}
+												sheet={sheet}
+											/>
+										))}
+										{sheetsOngoing.length === 0 && (
+											<div className="text-center">
+												현재 진행 중인 교재가 없습니다 🥺
+											</div>
+										)}
+									</>
 								)}
 							</AccordionContent>
 						</AccordionItem>
