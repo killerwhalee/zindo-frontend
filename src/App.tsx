@@ -4,9 +4,10 @@ import BottomNav from '@/components/layout/BottomNav';
 
 // Pages
 import Demo from '@/pages/Demo';
+import Home from '@/pages/Home';
+import NotFound from '@/pages/NotFound';
 
 // Lazy pages
-const Home = lazy(() => import('@/pages/Home'));
 const SignIn = lazy(() => import('@/pages/User/SignIn'));
 const SignUp = lazy(() => import('@/pages/User/SignUp'));
 const StudentList = lazy(() => import('@/pages/Students/StudentList'));
@@ -91,6 +92,12 @@ export default function App() {
 						element={<RecordEdit />}
 					/>
 				</Route>
+
+				{/* 404 */}
+				<Route
+					path="*"
+					element={<NotFound />}
+				/>
 			</Routes>
 
 			<BottomNav />
