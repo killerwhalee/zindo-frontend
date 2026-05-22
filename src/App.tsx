@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import BottomNav from '@/components/layout/BottomNav';
+import { Toaster } from '@/components/ui/sonner';
 
 // Pages
 import Demo from '@/pages/Demo';
@@ -10,6 +11,7 @@ import NotFound from '@/pages/NotFound';
 // Lazy pages
 const SignIn = lazy(() => import('@/pages/User/SignIn'));
 const SignUp = lazy(() => import('@/pages/User/SignUp'));
+const ResetPassword = lazy(() => import('@/pages/User/ResetPassword'));
 const StudentList = lazy(() => import('@/pages/Students/StudentList'));
 const StudentAdd = lazy(() => import('@/pages/Students/StudentAdd'));
 const StudentEdit = lazy(() => import('@/pages/Students/StudentEdit'));
@@ -45,7 +47,10 @@ export default function App() {
 						path="signup"
 						element={<SignUp />}
 					/>
-					<Route path="forgot-password" />
+					<Route
+						path="forgot-password"
+						element={<ResetPassword />}
+					/>
 				</Route>
 
 				{/* Student */}
@@ -101,6 +106,7 @@ export default function App() {
 			</Routes>
 
 			<BottomNav />
+			<Toaster />
 		</div>
 	);
 }

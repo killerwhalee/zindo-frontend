@@ -1,6 +1,6 @@
 import { isAxiosError } from 'axios';
 import { Controller, useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,36 +22,29 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import api from '@/lib/api';
-import { setTokens } from '@/lib/auth';
 
 const formSchema = z.object({
 	email: z.email('올바른 이메일 주소를 입력하세요.'),
-	password: z.string().min(1, '비밀번호를 입력하세요.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-export default function SignIn() {
-	const navigate = useNavigate();
-
+export default function ResetPassword() {
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
-		defaultValues: { email: '', password: '' },
+		defaultValues: { email: '' },
 	});
 
 	async function onSubmit(data: FormValues) {
 		try {
-			const res = await api.post('/user/auth/signin/', {
-				email: data.email,
-				password: data.password,
-			});
-			setTokens(res.data.access, res.data.refresh);
-			navigate('/');
+			await api.post('/user/auth/password-reset/', { email: data.email });
+			toast.success('비밀번호 재설정 메일이 발송되었습니다. 이메일을 확인해주세요.');
+			form.reset();
 		} catch (err) {
 			if (isAxiosError(err) && err.response?.data?.detail) {
 				toast.error(err.response.data.detail);
 			} else {
-				toast.error('로그인에 실패했습니다.');
+				toast.error('요청에 실패했습니다. 다시 시도해주세요.');
 			}
 		}
 	}
@@ -69,9 +62,9 @@ export default function SignIn() {
 
 			<Card>
 				<CardHeader className="text-center">
-					<CardTitle className="text-lg">로그인</CardTitle>
+					<CardTitle className="text-lg">비밀번호 재설정</CardTitle>
 					<CardDescription>
-						로그인하여 모든 서비스에 접근하세요!
+						가입한 이메일로 재설정 링크를 보내드립니다.
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
@@ -82,43 +75,13 @@ export default function SignIn() {
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="signin-email">
-											이메일
-										</FieldLabel>
+										<FieldLabel htmlFor="reset-email">이메일</FieldLabel>
 										<Input
 											{...field}
 											type="email"
-											id="signin-email"
+											id="reset-email"
 											placeholder="email@example.com"
 											autoComplete="email"
-										/>
-										{fieldState.invalid && (
-											<FieldError errors={[fieldState.error]} />
-										)}
-									</Field>
-								)}
-							/>
-
-							<Controller
-								name="password"
-								control={form.control}
-								render={({ field, fieldState }) => (
-									<Field>
-										<FieldLabel
-											htmlFor="signin-password"
-											className="flex justify-between"
-										>
-											비밀번호
-											<Link to="/user/forgot-password">
-												비밀번호를 잊으셨나요?
-											</Link>
-										</FieldLabel>
-										<Input
-											{...field}
-											type="password"
-											id="signin-password"
-											placeholder="비밀번호"
-											autoComplete="current-password"
 										/>
 										{fieldState.invalid && (
 											<FieldError errors={[fieldState.error]} />
@@ -133,11 +96,10 @@ export default function SignIn() {
 									className="w-full"
 									disabled={form.formState.isSubmitting}
 								>
-									로그인
+									재설정 링크 보내기
 								</Button>
 								<FieldDescription className="text-center">
-									계정이 없으신가요?{' '}
-									<Link to="/user/signup">회원가입</Link>
+									<Link to="/user/signin">로그인으로 돌아가기</Link>
 								</FieldDescription>
 							</Field>
 						</FieldGroup>
