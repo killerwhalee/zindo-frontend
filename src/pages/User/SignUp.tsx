@@ -1,16 +1,13 @@
-import { Button } from '@/components/ui/button';
-import {
-	Field,
-	FieldDescription,
-	FieldError,
-	FieldGroup,
-	FieldLabel,
-} from '@/components/ui/field';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Input } from '@/components/ui/input';
+import { isAxiosError } from 'axios';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import api from '@/lib/api';
+import { Link } from 'react-router-dom';
+import * as z from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { CircleCheckIcon, OctagonXIcon } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
 	Card,
 	CardContent,
@@ -18,32 +15,64 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldGroup,
+	FieldLabel,
+} from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import api from '@/lib/api';
 
-const formSchema = z.object({
-	username: z.string(),
-	email: z.email(),
-	password: z.string(),
-	password2: z.string(),
-});
-
-export default function SignUp() {
-	// Use zod form for validation
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+const formSchema = z
+	.object({
+		name: z.string().min(1, '이름을 입력하세요.'),
+		email: z.email('올바른 이메일 주소를 입력하세요.'),
+		password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.'),
+		password_confirm: z.string().min(1, '비밀번호 확인을 입력하세요.'),
+	})
+	.refine((d) => d.password === d.password_confirm, {
+		message: '비밀번호가 일치하지 않습니다.',
+		path: ['password_confirm'],
 	});
 
-	/**
-	 * Function to run after submission
-	 */
-	async function onSubmit(data: z.infer<typeof formSchema>) {
+type FormValues = z.infer<typeof formSchema>;
+type AlertState = { type: 'success' | 'error'; message: string } | null;
+
+export default function SignUp() {
+	const [alert, setAlert] = useState<AlertState>(null);
+
+	const form = useForm<FormValues>({
+		resolver: zodResolver(formSchema),
+		defaultValues: {
+			name: '',
+			email: '',
+			password: '',
+			password_confirm: '',
+		},
+	});
+
+	async function onSubmit(data: FormValues) {
+		setAlert(null);
 		try {
-			await api.post('/user/signin/', {});
-			console.log(data);
+			await api.post('/user/auth/signup/', data);
+			setAlert({
+				type: 'success',
+				message: '인증 메일이 발송되었습니다. 이메일을 확인하여 계정을 활성화해주세요.',
+			});
+			form.reset();
 		} catch (err) {
-			console.error('Failed to post data:', err);
-		} finally {
-			console.log('finally!');
+			if (isAxiosError(err) && err.response?.data) {
+				const errors = err.response.data;
+				const first = Object.values(errors).flat()[0];
+				setAlert({
+					type: 'error',
+					message: typeof first === 'string' ? first : '회원가입에 실패했습니다.',
+				});
+			} else {
+				setAlert({ type: 'error', message: '회원가입에 실패했습니다.' });
+			}
 		}
 	}
 
@@ -63,26 +92,48 @@ export default function SignUp() {
 					<CardTitle className="text-lg">회원가입</CardTitle>
 					<CardDescription>zindo의 새 멤버가 되어보세요!</CardDescription>
 				</CardHeader>
-				<CardContent>
-					<form
-						id="record-write-form"
-						onSubmit={form.handleSubmit(onSubmit)}
-					>
-						<FieldGroup className='gap-4'>
+				<CardContent className="space-y-4">
+					{alert && (
+						<Alert
+							variant={alert.type === 'error' ? 'destructive' : 'default'}
+							className={
+								alert.type === 'success'
+									? 'border-green-500 bg-green-50 text-green-800'
+									: undefined
+							}
+						>
+							{alert.type === 'success' ? (
+								<CircleCheckIcon />
+							) : (
+								<OctagonXIcon />
+							)}
+							<AlertDescription className={alert.type === 'success' ? 'text-green-700' : undefined}>
+								{alert.message}
+								{alert.type === 'success' && (
+									<>
+										{' '}
+										<Link to="/user/signin" className="underline font-medium">
+											로그인하기
+										</Link>
+									</>
+								)}
+							</AlertDescription>
+						</Alert>
+					)}
+
+					<form onSubmit={form.handleSubmit(onSubmit)}>
+						<FieldGroup className="gap-4">
 							<Controller
-								name="username"
+								name="name"
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="login-form-username">
-											아이디
-										</FieldLabel>
+										<FieldLabel htmlFor="signup-name">이름</FieldLabel>
 										<Input
 											{...field}
-											type="string"
-											id="login-form-username"
-											placeholder="아이디"
-											autoComplete="off"
+											id="signup-name"
+											placeholder="홍길동"
+											autoComplete="name"
 										/>
 										{fieldState.invalid && (
 											<FieldError errors={[fieldState.error]} />
@@ -96,15 +147,13 @@ export default function SignUp() {
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="login-form-username">
-											이메일 주소
-										</FieldLabel>
+										<FieldLabel htmlFor="signup-email">이메일</FieldLabel>
 										<Input
 											{...field}
-											type="string"
-											id="login-form-username"
+											type="email"
+											id="signup-email"
 											placeholder="email@example.com"
-											autoComplete="off"
+											autoComplete="email"
 										/>
 										{fieldState.invalid && (
 											<FieldError errors={[fieldState.error]} />
@@ -118,14 +167,15 @@ export default function SignUp() {
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="login-form-password">
+										<FieldLabel htmlFor="signup-password">
 											비밀번호
 										</FieldLabel>
 										<Input
 											{...field}
 											type="password"
-											id="login-form-password"
-											placeholder="비밀번호"
+											id="signup-password"
+											placeholder="8자 이상"
+											autoComplete="new-password"
 										/>
 										{fieldState.invalid && (
 											<FieldError errors={[fieldState.error]} />
@@ -135,18 +185,19 @@ export default function SignUp() {
 							/>
 
 							<Controller
-								name="password2"
+								name="password_confirm"
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="login-form-password">
+										<FieldLabel htmlFor="signup-password-confirm">
 											비밀번호 확인
 										</FieldLabel>
 										<Input
 											{...field}
 											type="password"
-											id="login-form-password"
+											id="signup-password-confirm"
 											placeholder="비밀번호 확인"
+											autoComplete="new-password"
 										/>
 										{fieldState.invalid && (
 											<FieldError errors={[fieldState.error]} />
@@ -159,12 +210,13 @@ export default function SignUp() {
 								<Button
 									type="submit"
 									className="w-full"
+									disabled={form.formState.isSubmitting}
 								>
 									회원가입
 								</Button>
-
 								<FieldDescription className="text-center">
-									이미 계정이 있나요? <Link to="/user/signin">로그인</Link>
+									이미 계정이 있나요?{' '}
+									<Link to="/user/signin">로그인</Link>
 								</FieldDescription>
 							</Field>
 						</FieldGroup>

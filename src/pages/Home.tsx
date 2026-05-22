@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 import {
 	Card,
@@ -6,8 +7,18 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { clearTokens, isAuthenticated } from '@/lib/auth';
 
 export default function Home() {
+	const navigate = useNavigate();
+	const [loggedIn, setLoggedIn] = useState(isAuthenticated);
+
+	function handleLogout() {
+		clearTokens();
+		setLoggedIn(false);
+	}
+
 	return (
 		<div className="pt-16">
 			<div className="mb-10">
@@ -54,6 +65,18 @@ export default function Home() {
 						</CardHeader>
 					</Link>
 				</Card>
+
+				<div className="flex justify-center pt-2">
+					{loggedIn ? (
+						<Button variant="ghost" onClick={handleLogout}>
+							로그아웃
+						</Button>
+					) : (
+						<Button variant="ghost" onClick={() => navigate('/user/signin')}>
+							로그인
+						</Button>
+					)}
+				</div>
 			</div>
 
 			<div className="my-10">

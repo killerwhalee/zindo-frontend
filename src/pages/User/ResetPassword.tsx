@@ -1,10 +1,10 @@
 import { isAxiosError } from 'axios';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { OctagonXIcon } from 'lucide-react';
+import { CircleCheckIcon, OctagonXIcon } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -24,38 +24,36 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import api from '@/lib/api';
-import { setTokens } from '@/lib/auth';
 
 const formSchema = z.object({
 	email: z.email('올바른 이메일 주소를 입력하세요.'),
-	password: z.string().min(1, '비밀번호를 입력하세요.'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
+type AlertState = { type: 'success' | 'error'; message: string } | null;
 
-export default function SignIn() {
-	const navigate = useNavigate();
-	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export default function ResetPassword() {
+	const [alert, setAlert] = useState<AlertState>(null);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
-		defaultValues: { email: '', password: '' },
+		defaultValues: { email: '' },
 	});
 
 	async function onSubmit(data: FormValues) {
-		setErrorMessage(null);
+		setAlert(null);
 		try {
-			const res = await api.post('/user/auth/signin/', {
-				email: data.email,
-				password: data.password,
+			await api.post('/user/auth/password-reset/', { email: data.email });
+			setAlert({
+				type: 'success',
+				message: '비밀번호 재설정 메일이 발송되었습니다. 이메일을 확인해주세요.',
 			});
-			setTokens(res.data.access, res.data.refresh);
-			navigate('/');
+			form.reset();
 		} catch (err) {
 			if (isAxiosError(err) && err.response?.data?.detail) {
-				setErrorMessage(err.response.data.detail);
+				setAlert({ type: 'error', message: err.response.data.detail });
 			} else {
-				setErrorMessage('로그인에 실패했습니다.');
+				setAlert({ type: 'error', message: '요청에 실패했습니다. 다시 시도해주세요.' });
 			}
 		}
 	}
@@ -73,16 +71,29 @@ export default function SignIn() {
 
 			<Card>
 				<CardHeader className="text-center">
-					<CardTitle className="text-lg">로그인</CardTitle>
+					<CardTitle className="text-lg">비밀번호 재설정</CardTitle>
 					<CardDescription>
-						로그인하여 모든 서비스에 접근하세요!
+						가입한 이메일로 재설정 링크를 보내드립니다.
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					{errorMessage && (
-						<Alert variant="destructive">
-							<OctagonXIcon />
-							<AlertDescription>{errorMessage}</AlertDescription>
+					{alert && (
+						<Alert
+							variant={alert.type === 'error' ? 'destructive' : 'default'}
+							className={
+								alert.type === 'success'
+									? 'border-green-500 bg-green-50 text-green-800'
+									: undefined
+							}
+						>
+							{alert.type === 'success' ? (
+								<CircleCheckIcon />
+							) : (
+								<OctagonXIcon />
+							)}
+							<AlertDescription className={alert.type === 'success' ? 'text-green-700' : undefined}>
+								{alert.message}
+							</AlertDescription>
 						</Alert>
 					)}
 
@@ -93,43 +104,13 @@ export default function SignIn() {
 								control={form.control}
 								render={({ field, fieldState }) => (
 									<Field>
-										<FieldLabel htmlFor="signin-email">
-											이메일
-										</FieldLabel>
+										<FieldLabel htmlFor="reset-email">이메일</FieldLabel>
 										<Input
 											{...field}
 											type="email"
-											id="signin-email"
+											id="reset-email"
 											placeholder="email@example.com"
 											autoComplete="email"
-										/>
-										{fieldState.invalid && (
-											<FieldError errors={[fieldState.error]} />
-										)}
-									</Field>
-								)}
-							/>
-
-							<Controller
-								name="password"
-								control={form.control}
-								render={({ field, fieldState }) => (
-									<Field>
-										<FieldLabel
-											htmlFor="signin-password"
-											className="flex justify-between"
-										>
-											비밀번호
-											<Link to="/user/forgot-password">
-												비밀번호를 잊으셨나요?
-											</Link>
-										</FieldLabel>
-										<Input
-											{...field}
-											type="password"
-											id="signin-password"
-											placeholder="비밀번호"
-											autoComplete="current-password"
 										/>
 										{fieldState.invalid && (
 											<FieldError errors={[fieldState.error]} />
@@ -144,11 +125,10 @@ export default function SignIn() {
 									className="w-full"
 									disabled={form.formState.isSubmitting}
 								>
-									로그인
+									재설정 링크 보내기
 								</Button>
 								<FieldDescription className="text-center">
-									계정이 없으신가요?{' '}
-									<Link to="/user/signup">회원가입</Link>
+									<Link to="/user/signin">로그인으로 돌아가기</Link>
 								</FieldDescription>
 							</Field>
 						</FieldGroup>

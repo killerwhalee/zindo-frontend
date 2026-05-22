@@ -10,6 +10,8 @@ import NotFound from '@/pages/NotFound';
 // Lazy pages
 const SignIn = lazy(() => import('@/pages/User/SignIn'));
 const SignUp = lazy(() => import('@/pages/User/SignUp'));
+const ResetPassword = lazy(() => import('@/pages/User/ResetPassword'));
+const VerifyEmail = lazy(() => import('@/pages/User/VerifyEmail'));
 const StudentList = lazy(() => import('@/pages/Students/StudentList'));
 const StudentAdd = lazy(() => import('@/pages/Students/StudentAdd'));
 const StudentEdit = lazy(() => import('@/pages/Students/StudentEdit'));
@@ -45,7 +47,14 @@ export default function App() {
 						path="signup"
 						element={<SignUp />}
 					/>
-					<Route path="forgot-password" />
+					<Route
+						path="forgot-password"
+						element={<ResetPassword />}
+					/>
+					<Route
+						path="verify-email"
+						element={<VerifyEmail />}
+					/>
 				</Route>
 
 				{/* Student */}
