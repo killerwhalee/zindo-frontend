@@ -18,7 +18,6 @@ import {
 	MoreHorizontalIcon,
 	Plus,
 	PlusIcon,
-	RefreshCwIcon,
 } from 'lucide-react';
 import {
 	DropdownMenu,
@@ -45,6 +44,7 @@ import {
 } from '@/components/ui/drawer';
 import { DialogDescription } from '@radix-ui/react-dialog';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
+import PullToRefreshIndicator from '@/components/layout/PullToRefreshIndicator';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function RecordList() {
@@ -61,7 +61,7 @@ export default function RecordList() {
 	const [openPace, setOpenPace] = useState(false);
 	const [pace, setPace] = useState(4);
 
-	const { pulling, refreshing } = usePullToRefresh(() => setLoading(true));
+	const { refreshState, pullDistance } = usePullToRefresh(() => setLoading(true));
 
 	const isInitialLoad = loading && !sheet;
 
@@ -160,11 +160,7 @@ export default function RecordList() {
 	return (
 		<div className="pt-16">
 			<TopBar title={`학습상황기록지`} />
-			{(pulling || refreshing) && (
-				<div className="flex justify-center py-2">
-					<RefreshCwIcon className={`size-5 text-muted-foreground${refreshing ? ' animate-spin' : ''}`} />
-				</div>
-			)}
+			<PullToRefreshIndicator refreshState={refreshState} pullDistance={pullDistance} />
 
 			<div className="p-4 space-y-3">
 				{isInitialLoad ? (

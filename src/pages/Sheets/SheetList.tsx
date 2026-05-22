@@ -7,11 +7,10 @@ import {
 } from '@/components/ui/card';
 import TopBar from '@/components/layout/TopBar';
 import { useEffect, useState } from 'react';
-import { type Student, type Sheet } from '@/components/types';
+import { type Student, type Sheet, type Record } from '@/components/types';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
 	Accordion,
@@ -21,7 +20,8 @@ import {
 } from '@/components/ui/accordion';
 import { convertGrade } from '@/lib/utils';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
-import { BookIcon, MoreHorizontalIcon, RefreshCwIcon } from 'lucide-react';
+import PullToRefreshIndicator from '@/components/layout/PullToRefreshIndicator';
+import { BookIcon, MoreHorizontalIcon } from 'lucide-react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -37,7 +37,14 @@ import {
 	DialogTitle,
 } from '@/components/ui/dialog';
 
-function SheetCard({ sheet, finished }: { sheet: Sheet; finished?: boolean }) {
+type DateRange = { start: string; end: string };
+
+function formatDate(iso: string): string {
+	const d = new Date(iso);
+	return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function SheetCard({ sheet, dateRange }: { sheet: Sheet; dateRange?: DateRange }) {
 	return (
 		<Link
 			to={`/record/?sheetId=${sheet.id}`}
@@ -48,10 +55,13 @@ function SheetCard({ sheet, finished }: { sheet: Sheet; finished?: boolean }) {
 					<CardTitle>{sheet.textbook_detail.name}</CardTitle>
 					<CardDescription>
 						{sheet.textbook_detail.subject}
-						{finished ? (
+						{dateRange ? (
 							<>
-								<Separator />
-								ISBN {sheet.textbook_detail.isbn}
+								{' '}
+								|{' '}
+								<span>
+									{formatDate(dateRange.start)} ~ {formatDate(dateRange.end)}
+								</span>
 							</>
 						) : (
 							<>
@@ -94,10 +104,11 @@ export default function SheetList() {
 	// State for API call
 	const [student, setStudent] = useState<Student>();
 	const [sheets, setSheets] = useState<Sheet[]>([]);
+	const [recordDates, setRecordDates] = useState<Map<number, DateRange>>(new Map());
 	const [loading, setLoading] = useState(true);
 	const [refreshKey, setRefreshKey] = useState(0);
 
-	const { pulling, refreshing } = usePullToRefresh(() => setRefreshKey((k) => k + 1));
+	const { refreshState, pullDistance } = usePullToRefresh(() => setRefreshKey((k) => k + 1));
 
 	// State for archive/activate dialog
 	const [openAction, setOpenAction] = useState(false);
@@ -117,6 +128,27 @@ export default function SheetList() {
 
 				setStudent(studentRes.data);
 				setSheets(sheetRes.data);
+
+				const finished = sheetRes.data.filter((s) => s.is_finished);
+				if (finished.length > 0) {
+					const recordResults = await Promise.all(
+						finished.map((s) =>
+							api.get<Record[]>('/zindo/records/', { params: { sheet__id: s.id } })
+						)
+					);
+					const dates = new Map<number, DateRange>();
+					finished.forEach((sheet, i) => {
+						const records = recordResults[i].data;
+						if (records.length > 0) {
+							dates.set(sheet.id, {
+								// API is ordered by -created_at: first = newest, last = oldest
+								end: records[0].created_at,
+								start: records[records.length - 1].created_at,
+							});
+						}
+					});
+					setRecordDates(dates);
+				}
 			} catch (err) {
 				console.error('Failed to load data:', err);
 			} finally {
@@ -152,11 +184,7 @@ export default function SheetList() {
 	return (
 		<div className="pt-16">
 			<TopBar title="학습상황기록지 목록" />
-			{(pulling || refreshing) && (
-				<div className="flex justify-center py-2">
-					<RefreshCwIcon className={`size-5 text-muted-foreground${refreshing ? ' animate-spin' : ''}`} />
-				</div>
-			)}
+			<PullToRefreshIndicator refreshState={refreshState} pullDistance={pullDistance} />
 			<div className="p-4 space-y-3">
 				<div className="flex justify-between items-center">
 					{isInitialLoad ? (
@@ -333,7 +361,7 @@ export default function SheetList() {
 									<SheetCard
 										key={sheet.id}
 										sheet={sheet}
-										finished
+										dateRange={recordDates.get(sheet.id)}
 									/>
 								))}
 								{sheetsFinished.length === 0 && (
@@ -351,7 +379,7 @@ export default function SheetList() {
 							<SheetCard
 								key={sheet.id}
 								sheet={sheet}
-								finished={sheet.is_finished}
+								dateRange={sheet.is_finished ? recordDates.get(sheet.id) : undefined}
 							/>
 						))}
 						{sheets.length === 0 && (

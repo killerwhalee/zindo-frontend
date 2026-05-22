@@ -14,5 +14,8 @@ export default defineConfig({
 	},
 	server: {
 		host: true,
+		proxy: {
+			'/zindo': 'http://localhost:8000',
+		},
 	},
 });

@@ -16,13 +16,14 @@ import {
 	ArrowUpIcon,
 	ChevronRightIcon,
 	PlusIcon,
-	RefreshCwIcon,
+
 	SearchIcon,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { convertGrade } from '@/lib/utils';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
+import PullToRefreshIndicator from '@/components/layout/PullToRefreshIndicator';
 import {
 	Accordion,
 	AccordionContent,
@@ -39,7 +40,7 @@ export default function StudentList() {
 	const [ordering, setOrdering] = useState<Ordering>('name');
 	const [search, setSearch] = useState('');
 
-	const { pulling, refreshing } = usePullToRefresh(() =>
+	const { refreshState, pullDistance } = usePullToRefresh(() =>
 		fetchStudents(ordering),
 	);
 
@@ -70,13 +71,7 @@ export default function StudentList() {
 	return (
 		<div className="pt-16">
 			<TopBar title="아동 목록" />
-			{(pulling || refreshing) && (
-				<div className="flex justify-center py-2">
-					<RefreshCwIcon
-						className={`size-5 text-muted-foreground${refreshing ? ' animate-spin' : ''}`}
-					/>
-				</div>
-			)}
+			<PullToRefreshIndicator refreshState={refreshState} pullDistance={pullDistance} />
 
 			<div className="p-4 space-y-3">
 				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
