@@ -21,7 +21,8 @@ import {
 } from '@/components/ui/accordion';
 import { convertGrade } from '@/lib/utils';
 import { usePullToRefresh } from '@/lib/usePullToRefresh';
-import { BookIcon, MoreHorizontalIcon, RefreshCwIcon } from 'lucide-react';
+import PullToRefreshIndicator from '@/components/layout/PullToRefreshIndicator';
+import { BookIcon, MoreHorizontalIcon } from 'lucide-react';
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -97,7 +98,7 @@ export default function SheetList() {
 	const [loading, setLoading] = useState(true);
 	const [refreshKey, setRefreshKey] = useState(0);
 
-	const { pulling, refreshing } = usePullToRefresh(() => setRefreshKey((k) => k + 1));
+	const { refreshState, pullDistance } = usePullToRefresh(() => setRefreshKey((k) => k + 1));
 
 	// State for archive/activate dialog
 	const [openAction, setOpenAction] = useState(false);
@@ -152,11 +153,7 @@ export default function SheetList() {
 	return (
 		<div className="pt-16">
 			<TopBar title="학습상황기록지 목록" />
-			{(pulling || refreshing) && (
-				<div className="flex justify-center py-2">
-					<RefreshCwIcon className={`size-5 text-muted-foreground${refreshing ? ' animate-spin' : ''}`} />
-				</div>
-			)}
+			<PullToRefreshIndicator refreshState={refreshState} pullDistance={pullDistance} />
 			<div className="p-4 space-y-3">
 				<div className="flex justify-between items-center">
 					{isInitialLoad ? (

@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
-const THRESHOLD = 80;
+export const PULL_THRESHOLD = 80;
+
+export type RefreshState = 'idle' | 'pulling' | 'triggered' | 'refreshing';
 
 export function usePullToRefresh(onRefresh: () => Promise<void> | void) {
-	const [pulling, setPulling] = useState(false);
-	const [refreshing, setRefreshing] = useState(false);
+	const [refreshState, setRefreshState] = useState<RefreshState>('idle');
+	const [pullDistance, setPullDistance] = useState(0);
+
 	const startY = useRef(0);
 	const isTouching = useRef(false);
 	const triggered = useRef(false);
@@ -22,28 +25,28 @@ export function usePullToRefresh(onRefresh: () => Promise<void> | void) {
 
 		function handleTouchMove(e: TouchEvent) {
 			if (!isTouching.current) return;
-			const delta = e.touches[0].clientY - startY.current;
-			// scrollY check is intentionally omitted here: mobile browsers introduce
-			// a tiny scroll offset during a drag gesture which would break the check.
-			const shouldTrigger = delta >= THRESHOLD;
-			if (shouldTrigger !== triggered.current) {
-				triggered.current = shouldTrigger;
-				setPulling(shouldTrigger);
-			}
+			const delta = Math.max(0, e.touches[0].clientY - startY.current);
+			const shouldTrigger = delta >= PULL_THRESHOLD;
+			triggered.current = shouldTrigger;
+			setPullDistance(delta);
+			setRefreshState(shouldTrigger ? 'triggered' : delta > 0 ? 'pulling' : 'idle');
 		}
 
 		async function handleTouchEnd() {
 			if (!isTouching.current) return;
 			isTouching.current = false;
 			startY.current = 0;
+
 			if (triggered.current) {
 				triggered.current = false;
-				setPulling(false);
-				setRefreshing(true);
+				setPullDistance(0);
+				setRefreshState('refreshing');
 				await onRefreshRef.current();
-				setRefreshing(false);
+				setRefreshState('idle');
 			} else {
 				triggered.current = false;
+				setPullDistance(0);
+				setRefreshState('idle');
 			}
 		}
 
@@ -58,5 +61,5 @@ export function usePullToRefresh(onRefresh: () => Promise<void> | void) {
 		};
 	}, []);
 
-	return { pulling, refreshing };
+	return { refreshState, pullDistance };
 }
