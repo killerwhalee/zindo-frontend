@@ -1,10 +1,12 @@
 import { isAxiosError } from 'axios';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 import * as z from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { OctagonXIcon } from 'lucide-react';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
 	Card,
@@ -33,6 +35,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function SignIn() {
 	const navigate = useNavigate();
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const form = useForm<FormValues>({
 		resolver: zodResolver(formSchema),
@@ -40,6 +43,7 @@ export default function SignIn() {
 	});
 
 	async function onSubmit(data: FormValues) {
+		setErrorMessage(null);
 		try {
 			const res = await api.post('/user/auth/signin/', {
 				email: data.email,
@@ -49,9 +53,9 @@ export default function SignIn() {
 			navigate('/');
 		} catch (err) {
 			if (isAxiosError(err) && err.response?.data?.detail) {
-				toast.error(err.response.data.detail);
+				setErrorMessage(err.response.data.detail);
 			} else {
-				toast.error('로그인에 실패했습니다.');
+				setErrorMessage('로그인에 실패했습니다.');
 			}
 		}
 	}
@@ -74,7 +78,14 @@ export default function SignIn() {
 						로그인하여 모든 서비스에 접근하세요!
 					</CardDescription>
 				</CardHeader>
-				<CardContent>
+				<CardContent className="space-y-4">
+					{errorMessage && (
+						<Alert variant="destructive">
+							<OctagonXIcon />
+							<AlertDescription>{errorMessage}</AlertDescription>
+						</Alert>
+					)}
+
 					<form onSubmit={form.handleSubmit(onSubmit)}>
 						<FieldGroup className="gap-4">
 							<Controller
