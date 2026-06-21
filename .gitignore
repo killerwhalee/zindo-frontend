@@ -25,5 +25,8 @@ npm-debug.log*
 .env.local
 .env.*.local
 
+# Lockfiles
+
+
 # Generated shadcn components
 components.json
