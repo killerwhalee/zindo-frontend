@@ -20,6 +20,8 @@ const SheetAdd = lazy(() => import('@/pages/Sheets/SheetAdd'));
 const RecordList = lazy(() => import('@/pages/Records/RecordList'));
 const RecordAdd = lazy(() => import('@/pages/Records/RecordAdd'));
 const RecordEdit = lazy(() => import('@/pages/Records/RecordEdit'));
+const StatsStudentList = lazy(() => import('@/pages/Stats/StatsStudentList'));
+const StatsDetail = lazy(() => import('@/pages/Stats/StatsDetail'));
 
 export default function App() {
 	return (
@@ -99,6 +101,18 @@ export default function App() {
 					<Route
 						path=":recordId/edit"
 						element={<RecordEdit />}
+					/>
+				</Route>
+
+				{/* Stats */}
+				<Route path="stats">
+					<Route
+						index
+						element={<StatsStudentList />}
+					/>
+					<Route
+						path=":studentId"
+						element={<StatsDetail />}
 					/>
 				</Route>
 

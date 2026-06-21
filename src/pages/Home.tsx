@@ -56,9 +56,9 @@ export default function Home() {
 				</Card>
 
 				<Card>
-					<Link to="#">
-						<CardHeader className="text-center text-muted-foreground">
-							<CardTitle className="text-lg">학습 통계 (준비중)</CardTitle>
+					<Link to="/stats">
+						<CardHeader className="text-center">
+							<CardTitle className="text-lg">학습 통계</CardTitle>
 							<CardDescription>
 								지금까지의 학습 과정을 되돌아보아요.
 							</CardDescription>
