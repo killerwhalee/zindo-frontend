@@ -272,7 +272,7 @@ export default function StatsDetail() {
 			}
 			metricsList.sort((a, b) => b.pages - a.pages);
 			setSheetMetrics(metricsList);
-			setStudentMetrics(computeStudentMetrics(metricsList, selectedValidDays));
+			setStudentMetrics(computeStudentMetrics(metricsList));
 
 			// Cross-student: same logic as per-student — finished sheets use full range
 			const byStudentId = new Map<number, LearningRecord[]>();
@@ -308,7 +308,7 @@ export default function StatsDetail() {
 					}
 				}
 				if (smList.length > 0) {
-					allStudentMetrics.push(computeStudentMetrics(smList, selectedValidDays));
+					allStudentMetrics.push(computeStudentMetrics(smList));
 				}
 			}
 			setCrossValues({
@@ -370,7 +370,7 @@ export default function StatsDetail() {
 							clonedDoc.head.appendChild(fix);
 						},
 					},
-					jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' },
+					jsPDF: { unit: 'mm', format: 'a4' },
 				})
 				.from(htmlContent)
 				.save();
@@ -569,7 +569,7 @@ export default function StatsDetail() {
 			</div>
 
 			{hasFetched && studentMetrics && student && (
-				<div style={{ position: 'fixed', top: 0, left: '-9999px', width: '1040px', pointerEvents: 'none' }}>
+				<div style={{ position: 'fixed', top: 0, left: '-9999px', width: '710px', pointerEvents: 'none' }}>
 					<StatsReport
 						ref={reportRef}
 						student={student}

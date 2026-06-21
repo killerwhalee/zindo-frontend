@@ -21,9 +21,10 @@ export interface SheetMetrics {
 	pages: number
 	recordedDays: number  // valid days this sheet has a record
 	daysElapsed: number   // valid days from first to last record (finished sheets only)
+	validDaysCount: number // total valid days used as DR denominator (sheet-scoped for finished)
 	ppd: number           // pages / recordedDays
 	ap: number | null     // pages / (pace × daysElapsed), finished sheets only
-	dr: number            // recordedDays / totalValidDays
+	dr: number            // recordedDays / validDaysCount
 	firstDate: string     // earliest record date (YYYY-MM-DD)
 	lastDate: string      // latest record date (YYYY-MM-DD)
 }
@@ -64,9 +65,10 @@ export function computeSheetMetrics(
 		pages,
 		recordedDays,
 		daysElapsed,
+		validDaysCount: validDays.size,
 		ppd: recordedDays > 0 ? pages / recordedDays : 0,
 		ap,
-		dr: validDays.size > 0 ? recordedDays / validDays.size : 0,
+		dr: validDays.size > 0 ? 1 - recordedDays / validDays.size : 0,
 		firstDate: allDates[0] ?? '',
 		lastDate: allDates[allDates.length - 1] ?? '',
 	}
@@ -89,7 +91,6 @@ export interface StudentMetrics {
 
 export function computeStudentMetrics(
 	sheetMetricsList: SheetMetrics[],
-	validDays: Set<string>,
 ): StudentMetrics {
 	const totalPages = sheetMetricsList.reduce((s, sm) => s + sm.pages, 0)
 	const finished = sheetMetricsList.filter(sm => sm.sheet.is_finished && sm.daysElapsed > 0)
@@ -103,18 +104,25 @@ export function computeStudentMetrics(
 		.map(([subject, pages]) => ({ subject, pages }))
 		.sort((a, b) => b.pages - a.pages)
 
+	// PPD: total pages / Σ(recordedDays per sheet)
 	const totalRecordedDays = sheetMetricsList.reduce((s, sm) => s + sm.recordedDays, 0)
 	const ppd = totalRecordedDays > 0 ? totalPages / totalRecordedDays : 0
 
+	// DPB: Σ(daysElapsed) / n finished sheets
 	const totalElapsed = finished.reduce((s, sm) => s + sm.daysElapsed, 0)
 	const dpb = finished.length > 0 ? totalElapsed / finished.length : 0
 
-	const finishedPages = finished.reduce((s, sm) => s + sm.pages, 0)
-	const totalPace = finished.reduce((s, sm) => s + (sm.sheet.pace ?? 4) * sm.daysElapsed, 0)
-	const ap = totalPace > 0 ? finishedPages / totalPace : null
+	// AP: simple mean of per-sheet AP values over finished sheets — matches table footer
+	const finishedAP = finished.filter(sm => sm.ap !== null).map(sm => sm.ap as number)
+	const ap = finishedAP.length > 0
+		? finishedAP.reduce((a, b) => a + b, 0) / finishedAP.length
+		: null
 
-	const n = sheetMetricsList.length
-	const dr = n > 0 && validDays.size > 0 ? totalRecordedDays / (validDays.size * n) : 0
+	// DR: simple mean of per-sheet DR values over finished sheets — matches table footer
+	// (uses finished only, same scope as the per-sheet table average row)
+	const dr = finished.length > 0
+		? finished.reduce((s, sm) => s + sm.dr, 0) / finished.length
+		: 0
 
 	return {
 		totalPages,
