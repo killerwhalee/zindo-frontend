@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useLayoutEffect, useRef } from 'react';
 import { convertGrade } from '@/lib/utils';
 import type { Student } from '@/components/types';
 import type { SheetMetrics, StudentMetrics } from '@/lib/stats';
@@ -99,9 +99,35 @@ const RIGHT_COL = 662 - LEFT_COL - GAP; // 428px
 const STAT_BOX_W = (LEFT_COL - 8) / 2;   // 106px
 const METRIC_CARD_W = (RIGHT_COL - 8) / 2; // 210px
 
+// One A4 page height in CSS pixels at the 710px report width.
+// A4 content area: 277mm tall × 190mm wide; 710px / 190mm = 3.737 px/mm.
+const PAGE_H = Math.round(277 * 710 / 190); // 1035px
+
 const StatsReport = forwardRef<HTMLDivElement, Props>(
 	({ student, startDate, endDate, studentMetrics, sheetMetrics, pieChartUrl, crossValues, personalNewsletter, globalNewsletter }, ref) => {
 		const pieTotal = studentMetrics.subjectComposition.reduce((s, e) => s + e.pages, 0);
+
+		// Refs for targeted vertical compression of specific sections only.
+		const page1Ref = useRef<HTMLDivElement>(null);
+		const sheetSectionRef = useRef<HTMLDivElement>(null);
+		const page2Ref = useRef<HTMLDivElement>(null);
+		const newsletterBoxesRef = useRef<HTMLDivElement>(null);
+
+		useLayoutEffect(() => {
+			// Compress only `sectionEl` until `pageEl` fits within PAGE_H.
+			// zoom affects layout (unlike scaleY), so scrollHeight reflects the new size.
+			const fitSection = (pageEl: HTMLDivElement | null, sectionEl: HTMLDivElement | null) => {
+				if (!pageEl || !sectionEl) return;
+				sectionEl.style.zoom = '1';
+				const pageH = pageEl.scrollHeight;
+				const sectionH = sectionEl.scrollHeight;
+				if (pageH <= PAGE_H || sectionH === 0) return;
+				const zoom = (sectionH - (pageH - PAGE_H)) / sectionH;
+				if (zoom > 0) sectionEl.style.zoom = String(zoom);
+			};
+			fitSection(page1Ref.current, sheetSectionRef.current);
+			fitSection(page2Ref.current, newsletterBoxesRef.current);
+		});
 
 		const dateLabel = (() => {
 			const s = formatDate(startDate);
@@ -150,7 +176,7 @@ const StatsReport = forwardRef<HTMLDivElement, Props>(
 			<div ref={ref} style={{ width: 710, fontFamily: 'sans-serif', color: '#111827', backgroundColor: '#ffffff' }}>
 
 				{/* ── PAGE 1: 학습 통계 ── */}
-				<div style={{ padding: 24, boxSizing: 'border-box' }}>
+				<div ref={page1Ref} style={{ padding: 24, boxSizing: 'border-box' }}>
 					{pageHeader(`${student.name} 학습 통계 보고서`)}
 
 					{/* Section 1: 기본 통계 + 학습 효율 지표 */}
@@ -249,9 +275,9 @@ const StatsReport = forwardRef<HTMLDivElement, Props>(
 						</div>
 					</div>
 
-					{/* Section 3: 교재별 상세 */}
+					{/* Section 3: 교재별 상세 — compressed vertically if page 1 overflows */}
 					{sheetMetrics.length > 0 && (
-						<div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
+						<div ref={sheetSectionRef} style={{ borderTop: '1px solid #e5e7eb', paddingTop: 12 }}>
 							<p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 600, color: '#374151' }}>교재별 상세</p>
 							<table style={{ width: '100%', borderCollapse: 'collapse' }}>
 								<thead>
@@ -293,10 +319,11 @@ const StatsReport = forwardRef<HTMLDivElement, Props>(
 				{/* ── PAGE 2: 가정통신문 ──
 				    data-pdf-page2 marks the cut point for PDF generation.
 				    Everything above this element goes on page 1; this and below → page 2. */}
-				<div data-pdf-page2 style={{ padding: 24, boxSizing: 'border-box' }}>
+				<div data-pdf-page2 ref={page2Ref} style={{ padding: 24, boxSizing: 'border-box' }}>
 					{pageHeader(`${student.name} 가정통신문`)}
 
-					<div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+					{/* Newsletter boxes — compressed vertically if page 2 overflows */}
+					<div ref={newsletterBoxesRef} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 						<div style={{ border: '1px solid #d1d5db', borderRadius: 6, padding: '10px 12px' }}>
 							<p style={{ margin: '0 0 6px', fontSize: 9, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>전체 가정통신문</p>
 							{globalNewsletter
