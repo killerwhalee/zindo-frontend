@@ -22,6 +22,13 @@ const RecordAdd = lazy(() => import('@/pages/Records/RecordAdd'));
 const RecordEdit = lazy(() => import('@/pages/Records/RecordEdit'));
 const StatsStudentList = lazy(() => import('@/pages/Stats/StatsStudentList'));
 const StatsDetail = lazy(() => import('@/pages/Stats/StatsDetail'));
+const StatsBatchList = lazy(() => import('@/pages/Stats/StatsBatchList'));
+const StatsBatchCreate = lazy(() => import('@/pages/Stats/StatsBatchCreate'));
+const StatsBatchDetail = lazy(() => import('@/pages/Stats/StatsBatchDetail'));
+const StatsBatchOverview = lazy(() => import('@/pages/Stats/StatsBatchOverview'));
+const StatsBatchStudent = lazy(() => import('@/pages/Stats/StatsBatchStudent'));
+const StatsBatchNewsletter = lazy(() => import('@/pages/Stats/StatsBatchNewsletter'));
+const StatsBatchEdit = lazy(() => import('@/pages/Stats/StatsBatchEdit'));
 
 export default function App() {
 	return (
@@ -110,6 +117,39 @@ export default function App() {
 						index
 						element={<StatsStudentList />}
 					/>
+					{/* Batch routes must come before :studentId to avoid param collision */}
+					<Route path="batch">
+						<Route
+							index
+							element={<StatsBatchList />}
+						/>
+						<Route
+							path="new"
+							element={<StatsBatchCreate />}
+						/>
+						{/* Layout route: loads batch + computes metrics once, shares via Outlet context */}
+						<Route
+							path=":batchId"
+							element={<StatsBatchDetail />}
+						>
+							<Route
+								index
+								element={<StatsBatchOverview />}
+							/>
+							<Route
+								path="edit"
+								element={<StatsBatchEdit />}
+							/>
+							<Route
+								path="student/:studentId"
+								element={<StatsBatchStudent />}
+							/>
+							<Route
+								path="student/:studentId/newsletter"
+								element={<StatsBatchNewsletter />}
+							/>
+						</Route>
+					</Route>
 					<Route
 						path=":studentId"
 						element={<StatsDetail />}
