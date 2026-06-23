@@ -91,6 +91,7 @@ export interface StudentMetrics {
 
 export function computeStudentMetrics(
 	sheetMetricsList: SheetMetrics[],
+	validDaysTotal?: number,
 ): StudentMetrics {
 	const totalPages = sheetMetricsList.reduce((s, sm) => s + sm.pages, 0)
 	const finished = sheetMetricsList.filter(sm => sm.sheet.is_finished && sm.daysElapsed > 0)
@@ -104,9 +105,10 @@ export function computeStudentMetrics(
 		.map(([subject, pages]) => ({ subject, pages }))
 		.sort((a, b) => b.pages - a.pages)
 
-	// PPD: total pages / Σ(recordedDays per sheet)
+	// PPD: total pages / total valid days in period (not per-sheet sum, which double-counts)
 	const totalRecordedDays = sheetMetricsList.reduce((s, sm) => s + sm.recordedDays, 0)
-	const ppd = totalRecordedDays > 0 ? totalPages / totalRecordedDays : 0
+	const ppdDenominator = validDaysTotal !== undefined ? validDaysTotal : totalRecordedDays
+	const ppd = ppdDenominator > 0 ? totalPages / ppdDenominator : 0
 
 	// DPB: Σ(daysElapsed) / n finished sheets
 	const totalElapsed = finished.reduce((s, sm) => s + sm.daysElapsed, 0)
@@ -135,6 +137,7 @@ export function computeStudentMetrics(
 	}
 }
 
+
 export function listAvg(values: number[]): number | null {
 	if (values.length === 0) return null
 	return values.reduce((a, b) => a + b, 0) / values.length
@@ -143,4 +146,85 @@ export function listAvg(values: number[]): number | null {
 export function listMax(values: number[]): number | null {
 	if (values.length === 0) return null
 	return Math.max(...values)
+}
+
+/**
+ * Encapsulates the per-student metrics computation shared between StatsDetail
+ * and StatsBatchDetail. Handles finished-sheet vs active-sheet scoping.
+ */
+export function computeStudentMetricsFromRecords(
+	studentRecords: LearningRecord[],
+	globalValidDays: Set<string>,
+	startDate: string,
+	endDate: string,
+): { sheetMetrics: SheetMetrics[]; studentMetrics: StudentMetrics } {
+	const inRange = (d: string) =>
+		(!startDate || d >= startDate) && (!endDate || d <= endDate)
+
+	const selectedValidDays =
+		startDate || endDate
+			? new Set([...globalValidDays].filter(inRange))
+			: globalValidDays
+
+	const inRangeSheetIds = new Set(
+		studentRecords
+			.filter(r => inRange(r.created_at.slice(0, 10)))
+			.map(r => r.sheet_detail.id),
+	)
+
+	const bySheet = new Map<number, LearningRecord[]>()
+	for (const r of studentRecords) {
+		const sid = r.sheet_detail.id
+		if (!bySheet.has(sid)) bySheet.set(sid, [])
+		bySheet.get(sid)!.push(r)
+	}
+
+	const sheetMetrics: SheetMetrics[] = []
+	for (const [sheetId, records] of bySheet) {
+		if (!inRangeSheetIds.has(sheetId)) continue
+		const sheet = records[0].sheet_detail
+
+		if (sheet.is_finished) {
+			const dates = records.map(r => r.created_at.slice(0, 10)).sort()
+			const sheetValidDays = new Set(
+				[...globalValidDays].filter(d => d >= dates[0] && d <= dates[dates.length - 1]),
+			)
+			sheetMetrics.push(computeSheetMetrics(records, sheet, sheetValidDays))
+		} else {
+			const rangeRecords = records.filter(r => inRange(r.created_at.slice(0, 10)))
+			if (rangeRecords.length > 0) {
+				sheetMetrics.push(computeSheetMetrics(rangeRecords, sheet, selectedValidDays))
+			}
+		}
+	}
+	sheetMetrics.sort((a, b) => b.pages - a.pages)
+
+	return { sheetMetrics, studentMetrics: computeStudentMetrics(sheetMetrics, selectedValidDays.size) }
+}
+
+const PIE_COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#f97316', '#ec4899']
+
+export function renderPieChartUrl(subjectComposition: SubjectEntry[]): string {
+	const canvas = document.createElement('canvas')
+	canvas.width = 200
+	canvas.height = 200
+	const ctx = canvas.getContext('2d')
+	if (!ctx || subjectComposition.length === 0) return ''
+
+	const total = subjectComposition.reduce((s, e) => s + e.pages, 0)
+	const cx = 100, cy = 100, r = 85
+	let angle = -Math.PI / 2
+
+	subjectComposition.forEach((entry, i) => {
+		const sweep = (entry.pages / total) * 2 * Math.PI
+		ctx.beginPath()
+		ctx.moveTo(cx, cy)
+		ctx.arc(cx, cy, r, angle, angle + sweep)
+		ctx.closePath()
+		ctx.fillStyle = PIE_COLORS[i % PIE_COLORS.length]
+		ctx.fill()
+		angle += sweep
+	})
+
+	return canvas.toDataURL('image/png')
 }

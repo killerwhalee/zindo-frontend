@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import {
 	Table,
 	TableBody,
@@ -32,8 +33,7 @@ import {
 import { convertGrade } from '@/lib/utils';
 import type { Record as LearningRecord, Student } from '@/components/types';
 import {
-	computeSheetMetrics,
-	computeStudentMetrics,
+	computeStudentMetricsFromRecords,
 	getValidDays,
 	listAvg,
 	type SheetMetrics,
@@ -170,6 +170,7 @@ export default function StatsDetail() {
 	const [loading, setLoading] = useState(false);
 	const [hasFetched, setHasFetched] = useState(false);
 	const [pdfLoading, setPdfLoading] = useState(false);
+	const [newsletter, setNewsletter] = useState('');
 
 	const reportRef = useRef<HTMLDivElement>(null);
 	const pieCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -216,17 +217,14 @@ export default function StatsDetail() {
 		if (!studentId) return;
 		setLoading(true);
 		try {
-			// Fetch without date filter so finished sheets retain their full record range.
-			// Date filtering is applied in JS.
 			const [allRes, studentRes] = await Promise.all([
 				api.get('/zindo/records/'),
 				api.get('/zindo/records/', { params: { sheet__student__id: studentId } }),
 			]);
 
 			const allRecords: LearningRecord[] = allRes.data;
-			const studentRecordsAll: LearningRecord[] = studentRes.data;
-
 			const globalValidDays = getValidDays(allRecords);
+
 			const inRange = (d: string) =>
 				(!startDate || d >= startDate) && (!endDate || d <= endDate);
 			const selectedValidDays = startDate || endDate
@@ -234,47 +232,16 @@ export default function StatsDetail() {
 				: globalValidDays;
 			setValidDays(selectedValidDays);
 
-			// Sheets with at least one record in the selected date range
-			const inRangeSheetIds = new Set(
-				studentRecordsAll
-					.filter(r => inRange(r.created_at.slice(0, 10)))
-					.map(r => r.sheet_detail.id),
+			const { sheetMetrics: sm, studentMetrics: stm } = computeStudentMetricsFromRecords(
+				studentRes.data,
+				globalValidDays,
+				startDate,
+				endDate,
 			);
+			setSheetMetrics(sm);
+			setStudentMetrics(stm);
 
-			// Group all student records by sheet
-			const bySheet = new Map<number, LearningRecord[]>();
-			for (const r of studentRecordsAll) {
-				const sid = r.sheet_detail.id;
-				if (!bySheet.has(sid)) bySheet.set(sid, []);
-				bySheet.get(sid)!.push(r);
-			}
-
-			const metricsList: SheetMetrics[] = [];
-			for (const [sheetId, records] of bySheet) {
-				if (!inRangeSheetIds.has(sheetId)) continue;
-				const sheet = records[0].sheet_detail;
-
-				if (sheet.is_finished) {
-					// Use all records. validDays scoped to the sheet's own active period
-					// so DR and daysElapsed reflect the book from start to finish.
-					const dates = records.map(r => r.created_at.slice(0, 10)).sort();
-					const sheetValidDays = new Set(
-						[...globalValidDays].filter(d => d >= dates[0] && d <= dates[dates.length - 1]),
-					);
-					metricsList.push(computeSheetMetrics(records, sheet, sheetValidDays));
-				} else {
-					// Use only in-range records + selected-period valid days
-					const rangeRecords = records.filter(r => inRange(r.created_at.slice(0, 10)));
-					if (rangeRecords.length > 0) {
-						metricsList.push(computeSheetMetrics(rangeRecords, sheet, selectedValidDays));
-					}
-				}
-			}
-			metricsList.sort((a, b) => b.pages - a.pages);
-			setSheetMetrics(metricsList);
-			setStudentMetrics(computeStudentMetrics(metricsList));
-
-			// Cross-student: same logic as per-student — finished sheets use full range
+			// Cross-student: compute for every student using same logic
 			const byStudentId = new Map<number, LearningRecord[]>();
 			for (const r of allRecords) {
 				const stid = r.sheet_detail.student_detail.id;
@@ -283,33 +250,13 @@ export default function StatsDetail() {
 			}
 			const allStudentMetrics: StudentMetrics[] = [];
 			for (const [, sRecs] of byStudentId) {
-				const bySheetId = new Map<number, LearningRecord[]>();
-				for (const r of sRecs) {
-					const sid = r.sheet_detail.id;
-					if (!bySheetId.has(sid)) bySheetId.set(sid, []);
-					bySheetId.get(sid)!.push(r);
-				}
-				const smList: SheetMetrics[] = [];
-				for (const [, recs] of bySheetId) {
-					const hasInRange = recs.some(r => inRange(r.created_at.slice(0, 10)));
-					if (!hasInRange) continue;
-					const sheet = recs[0].sheet_detail;
-					if (sheet.is_finished) {
-						const dates = recs.map(r => r.created_at.slice(0, 10)).sort();
-						const sheetVD = new Set(
-							[...globalValidDays].filter(d => d >= dates[0] && d <= dates[dates.length - 1]),
-						);
-						smList.push(computeSheetMetrics(recs, sheet, sheetVD));
-					} else {
-						const rangeRecs = recs.filter(r => inRange(r.created_at.slice(0, 10)));
-						if (rangeRecs.length > 0) {
-							smList.push(computeSheetMetrics(rangeRecs, sheet, selectedValidDays));
-						}
-					}
-				}
-				if (smList.length > 0) {
-					allStudentMetrics.push(computeStudentMetrics(smList));
-				}
+				const { sheetMetrics: sSm, studentMetrics: sStm } = computeStudentMetricsFromRecords(
+					sRecs,
+					globalValidDays,
+					startDate,
+					endDate,
+				);
+				if (sSm.length > 0) allStudentMetrics.push(sStm);
 			}
 			setCrossValues({
 				ppd: allStudentMetrics.map(m => m.ppd),
@@ -343,37 +290,71 @@ export default function StatsDetail() {
 	const handleExportPdf = async () => {
 		if (!reportRef.current || !student) return;
 		setPdfLoading(true);
-		const htmlContent = reportRef.current.outerHTML;
 		try {
-			const { default: html2pdf } = await import('html2pdf.js');
-			await html2pdf()
-				.set({
-					margin: 10,
-					filename: `${student.name}_학습통계.pdf`,
-					image: { type: 'jpeg', quality: 0.95 },
-					html2canvas: {
-						scale: 2,
-						useCORS: true,
-						imageTimeout: 15000,
-						onclone: (clonedDoc: Document) => {
-							const fix = clonedDoc.createElement('style');
-							fix.textContent = `
-								:root, html, body {
-									--background: #ffffff !important; --foreground: #09090b !important;
-									--card: #ffffff !important; --card-foreground: #09090b !important;
-									--muted: #f4f4f5 !important; --muted-foreground: #71717a !important;
-									--border: #e4e4e7 !important; --primary: #18181b !important;
-									--primary-foreground: #fafafa !important;
-									background-color: #ffffff !important; color: #09090b !important;
-								}
-							`;
-							clonedDoc.head.appendChild(fix);
-						},
-					},
-					jsPDF: { unit: 'mm', format: 'a4' },
-				})
-				.from(htmlContent)
-				.save();
+			const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+				import('html2canvas'),
+				import('jspdf'),
+			]);
+
+			const onclone = (clonedDoc: Document) => {
+				const fix = clonedDoc.createElement('style');
+				fix.textContent = `
+					:root, html, body {
+						--background: #ffffff !important; --foreground: #09090b !important;
+						--card: #ffffff !important; --card-foreground: #09090b !important;
+						--muted: #f4f4f5 !important; --muted-foreground: #71717a !important;
+						--border: #e4e4e7 !important; --primary: #18181b !important;
+						--primary-foreground: #fafafa !important;
+						background-color: #ffffff !important; color: #09090b !important;
+					}
+				`;
+				clonedDoc.head.appendChild(fix);
+			};
+
+			const SCALE = 1.5;
+			const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+			const MARGIN = 10, contentW = 190, pageH_MM = 277;
+
+			const reportEl = reportRef.current;
+			const canvas = await html2canvas(reportEl, {
+				scale: SCALE,
+				useCORS: true,
+				imageTimeout: 15000,
+				onclone,
+			});
+
+			// StatsReport always renders exactly two pages: page 1 above [data-pdf-page2],
+			// page 2 starting at [data-pdf-page2]. If a page is taller than A4, it is
+			// compressed vertically by forcing imgH = pageH_MM.
+			const page2El = reportEl.querySelector('[data-pdf-page2]') as HTMLElement | null;
+			const elTop = reportEl.getBoundingClientRect().top;
+			const cutPx = page2El
+				? Math.round((page2El.getBoundingClientRect().top - elTop) * SCALE)
+				: canvas.height;
+
+			const slices = [
+				{ yStart: 0, yEnd: cutPx },
+				{ yStart: cutPx, yEnd: canvas.height },
+			];
+
+			for (let i = 0; i < slices.length; i++) {
+				const { yStart, yEnd } = slices[i];
+				const sliceH = yEnd - yStart;
+				if (sliceH <= 0) continue;
+				const slice = document.createElement('canvas');
+				slice.width = canvas.width;
+				slice.height = sliceH;
+				const ctx = slice.getContext('2d')!;
+				ctx.fillStyle = '#ffffff';
+				ctx.fillRect(0, 0, slice.width, slice.height);
+				ctx.drawImage(canvas, 0, -yStart);
+				const naturalH_mm = (sliceH / canvas.width) * contentW;
+				const imgH = Math.min(pageH_MM, naturalH_mm);
+				if (i > 0) pdf.addPage();
+				pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, contentW, imgH);
+			}
+
+			pdf.save(`${student.name}_학습통계.pdf`);
 		} catch (e) {
 			console.error('PDF export failed:', e);
 		} finally {
@@ -421,10 +402,12 @@ export default function StatsDetail() {
 				</div>
 
 				{loading && (
-					<div className="space-y-4">
-						<Skeleton className="h-24 w-full" />
-						<Skeleton className="h-48 w-full" />
-						<Skeleton className="h-64 w-full" />
+					<div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+						<div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+						<div className="space-y-1">
+							<p className="font-semibold text-sm">통계를 계산하는 중입니다</p>
+							<p className="text-xs text-muted-foreground">전체 학습 기록을 분석하고 있어요. 잠시만 기다려 주세요.</p>
+						</div>
 					</div>
 				)}
 
@@ -479,7 +462,7 @@ export default function StatsDetail() {
 									<h3 className="text-lg font-semibold mb-3">학습 효율 지표</h3>
 									<div className="space-y-3">
 										<MetricCard
-											label="평균 페이지 (PPD)"
+											label="일일 평균 페이지 (PPD)"
 											currentLabel={`${fmt(studentMetrics.ppd)}p/일`}
 											allValues={crossValues?.ppd ?? []}
 											currentValue={studentMetrics.ppd}
@@ -559,6 +542,16 @@ export default function StatsDetail() {
 									</div>
 								)}
 
+								<div>
+									<h3 className="text-lg font-semibold mb-3">개별 가정통신문</h3>
+									<Textarea
+										value={newsletter}
+										onChange={(e) => setNewsletter(e.target.value)}
+										placeholder="이번 달 학습 소감을 입력하세요"
+										className="min-h-[120px] resize-none"
+									/>
+								</div>
+
 								<Button className="w-full" onClick={handleExportPdf} disabled={pdfLoading}>
 									{pdfLoading ? '저장 중...' : 'PDF 내보내기'}
 								</Button>
@@ -580,6 +573,7 @@ export default function StatsDetail() {
 						validDays={validDays}
 						pieChartUrl={pieChartUrl}
 						crossValues={crossValues}
+						personalNewsletter={newsletter || undefined}
 					/>
 				</div>
 			)}
