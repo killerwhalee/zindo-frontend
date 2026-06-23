@@ -313,7 +313,7 @@ export default function StatsDetail() {
 
 			const SCALE = 1.5;
 			const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
-			const MARGIN = 10, contentW = 190, pageH_MM = 277;
+			const MARGIN = 10, contentW = 190;
 
 			const reportEl = reportRef.current;
 			const canvas = await html2canvas(reportEl, {
@@ -348,8 +348,7 @@ export default function StatsDetail() {
 				ctx.fillStyle = '#ffffff';
 				ctx.fillRect(0, 0, slice.width, slice.height);
 				ctx.drawImage(canvas, 0, -yStart);
-				const naturalH_mm = (sliceH / canvas.width) * contentW;
-				const imgH = Math.min(pageH_MM, naturalH_mm);
+				const imgH = (sliceH / canvas.width) * contentW;
 				if (i > 0) pdf.addPage();
 				pdf.addImage(slice.toDataURL('image/jpeg', 0.92), 'JPEG', MARGIN, MARGIN, contentW, imgH);
 			}
