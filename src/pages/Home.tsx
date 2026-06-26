@@ -43,11 +43,9 @@ export default function Home() {
 				</Card>
 
 				<Card>
-					<Link to="#">
-						<CardHeader className="text-center text-muted-foreground">
-							<CardTitle className="text-lg">
-								오늘의 학습상황 (준비중)
-							</CardTitle>
+					<Link to="/daily">
+						<CardHeader className="text-center">
+							<CardTitle className="text-lg">오늘의 학습상황</CardTitle>
 							<CardDescription>
 								오늘의 학습상황을 한 눈에 확인하세요.
 							</CardDescription>
