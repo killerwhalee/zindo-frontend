@@ -20,8 +20,10 @@ const SheetAdd = lazy(() => import('@/pages/Sheets/SheetAdd'));
 const RecordList = lazy(() => import('@/pages/Records/RecordList'));
 const RecordAdd = lazy(() => import('@/pages/Records/RecordAdd'));
 const RecordEdit = lazy(() => import('@/pages/Records/RecordEdit'));
+const StatsMenu = lazy(() => import('@/pages/Stats/StatsMenu'));
 const StatsStudentList = lazy(() => import('@/pages/Stats/StatsStudentList'));
 const StatsDetail = lazy(() => import('@/pages/Stats/StatsDetail'));
+const DailyStudy = lazy(() => import('@/pages/DailyStudy'));
 const StatsBatchList = lazy(() => import('@/pages/Stats/StatsBatchList'));
 const StatsBatchCreate = lazy(() => import('@/pages/Stats/StatsBatchCreate'));
 const StatsBatchDetail = lazy(() => import('@/pages/Stats/StatsBatchDetail'));
@@ -111,10 +113,20 @@ export default function App() {
 					/>
 				</Route>
 
+				{/* Daily study */}
+				<Route
+					path="daily"
+					element={<DailyStudy />}
+				/>
+
 				{/* Stats */}
 				<Route path="stats">
 					<Route
 						index
+						element={<StatsMenu />}
+					/>
+					<Route
+						path="individual"
 						element={<StatsStudentList />}
 					/>
 					{/* Batch routes must come before :studentId to avoid param collision */}

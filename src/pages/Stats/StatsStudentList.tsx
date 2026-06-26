@@ -88,14 +88,9 @@ export default function StatsStudentList() {
 			<PullToRefreshIndicator refreshState={refreshState} pullDistance={pullDistance} />
 
 			<div className="p-4 space-y-3">
-				<div className="flex items-center justify-between">
-					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
-						학생 선택
-					</h3>
-					<Button variant="outline" size="sm" onClick={() => navigate('/stats/batch')}>
-						단체 가정통신문
-					</Button>
-				</div>
+				<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">
+					개인 통계
+				</h3>
 
 				<div className="flex gap-4 items-center">
 					<Button
