@@ -1,6 +1,13 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckIcon, ChevronRightIcon, SlidersHorizontalIcon } from 'lucide-react';
+import {
+	CheckIcon,
+	ChevronDownIcon,
+	ChevronRightIcon,
+	DatabaseIcon,
+	RefreshCwIcon,
+	SlidersHorizontalIcon,
+} from 'lucide-react';
 import api from '@/lib/api';
 import TopBar from '@/components/layout/TopBar';
 import { Button } from '@/components/ui/button';
@@ -17,12 +24,16 @@ export default function StatsBatchOverview() {
 		students,
 		metricsResults,
 		crossValues,
+		dataLoaded,
+		dataLoading,
+		loadData,
 		globalNewsletter,
 		setGlobalNewsletter,
 		studentNewsletters,
 	} = useBatchContext();
 
 	const [pdfLoading, setPdfLoading] = useState(false);
+	const [studentsOpen, setStudentsOpen] = useState(true);
 	const batchReportRef = useRef<HTMLDivElement>(null);
 
 	const saveGlobalNewsletter = async (value: string) => {
@@ -58,9 +69,6 @@ export default function StatsBatchOverview() {
 			const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
 			const MARGIN = 10, contentW = 190;
 
-			// Each StatsReport renders exactly two pages: everything above [data-pdf-page2]
-			// → page 1, [data-pdf-page2] and below → page 2. Pages taller than A4 are
-			// compressed vertically by capping imgH at pageH_MM.
 			let firstPdf = true;
 			const reportDivs = Array.from(batchReportRef.current.children) as HTMLElement[];
 			for (const reportDiv of reportDivs) {
@@ -140,10 +148,55 @@ export default function StatsBatchOverview() {
 
 				<Separator />
 
-				{/* Student list */}
+				{/* Load / refresh stats button — always visible */}
 				<div className="space-y-2">
-					<h3 className="text-lg font-semibold">학생별</h3>
-					{students.map((student) => {
+					<h3 className="text-lg font-semibold">데이터 불러오기</h3>
+					<p className="text-sm text-muted-foreground">데이터 불러오기 이후 학생별 통계 조회와 PDF 내보내기가 가능합니다. 가정통신문은 데이터 불러오기 없이 작성할 수 있습니다.</p>
+
+					<Button
+						className="w-full"
+						variant='outline'
+						onClick={loadData}
+						disabled={dataLoading}
+					>
+						{dataLoading ? (
+							<>
+								<div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+								통계 불러오는 중...
+							</>
+						) : dataLoaded ? (
+							<>
+								<RefreshCwIcon className="size-4 mr-2" />
+								통계 다시 불러오기
+							</>
+						) : (
+							<>
+								<DatabaseIcon className="size-4 mr-2" />
+								통계 데이터 불러오기
+							</>
+						)}
+					</Button>
+				</div>
+
+
+				<Separator />
+
+				{/* Student list — foldable */}
+				<div className="space-y-2">
+					<button
+						className="flex items-center justify-between w-full"
+						onClick={() => setStudentsOpen((o) => !o)}
+					>
+						<h3 className="text-lg font-semibold">학생 목록</h3>
+						<div className="flex items-center gap-2">
+							<span className="text-sm text-muted-foreground">{students.length}명</span>
+							<ChevronDownIcon
+								className={`size-4 text-muted-foreground transition-transform duration-200 ${studentsOpen ? '' : '-rotate-90'}`}
+							/>
+						</div>
+					</button>
+
+					{studentsOpen && students.map((student) => {
 						const hasNewsletter = !!(studentNewsletters[String(student.id)]?.trim());
 						return (
 							<div key={student.id} className="flex items-center gap-2 p-3 border rounded-lg">
@@ -151,7 +204,12 @@ export default function StatsBatchOverview() {
 									<p className="font-medium text-sm">{student.name}</p>
 									<p className="text-xs text-muted-foreground">{convertGrade(student.grade)}</p>
 								</div>
-								<Button size="sm" variant="outline" onClick={() => navigate(`student/${student.id}`)}>
+								<Button
+									size="sm"
+									variant="outline"
+									onClick={() => navigate(`student/${student.id}`)}
+									disabled={!dataLoaded}
+								>
 									통계 보기
 								</Button>
 								<Button
@@ -168,13 +226,17 @@ export default function StatsBatchOverview() {
 					})}
 				</div>
 
-				<Button className="w-full" onClick={handleExportPdf} disabled={pdfLoading}>
+				<Button
+					className="w-full"
+					onClick={handleExportPdf}
+					disabled={!dataLoaded || pdfLoading}
+				>
 					{pdfLoading ? '저장 중...' : 'PDF 내보내기'}
 				</Button>
 			</div>
 
 			{/* Off-screen report for PDF */}
-			{metricsResults.length > 0 && (
+			{dataLoaded && metricsResults.length > 0 && (
 				<div style={{ position: 'fixed', top: 0, left: '-9999px', width: '710px', pointerEvents: 'none' }}>
 					<div ref={batchReportRef}>
 						{metricsResults.map((result, i) => {

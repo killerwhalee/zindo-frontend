@@ -12,60 +12,84 @@ import type { CrossStudentValues } from '@/pages/Stats/StatsReport';
 import type { BatchContext, StudentMetricsResult } from '@/pages/Stats/batchShared';
 
 /**
- * Layout route for `/stats/batch/:batchId`. Loads the batch and computes metrics
- * for every student once, then shares everything with its child pages (overview,
- * per-student stats, newsletter editor, settings) through <Outlet context>.
+ * Layout route for `/stats/batch/:batchId`.
+ *
+ * Two-phase loading:
+ * 1. Fast load (on mount): batch metadata + student details. Populates `batch` and
+ *    `students` so newsletters and settings are usable without delay.
+ * 2. On-demand load (user-triggered via `loadData`): all records + per-student records
+ *    + metrics computation. Sets `dataLoaded = true` when complete.
+ *
+ * `reload()` re-runs the fast load only and resets `dataLoaded` so stale metrics are cleared.
  */
 export default function StatsBatchDetail() {
 	const { batchId } = useParams<{ batchId: string }>();
 
 	const [batch, setBatch] = useState<StatsBatch | null>(null);
+	const [batchLoading, setBatchLoading] = useState(true);
 	const [students, setStudents] = useState<Student[]>([]);
+
+	const [dataLoaded, setDataLoaded] = useState(false);
+	const [dataLoading, setDataLoading] = useState(false);
 	const [metricsResults, setMetricsResults] = useState<StudentMetricsResult[]>([]);
 	const [crossValues, setCrossValues] = useState<CrossStudentValues | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [loadingStep, setLoadingStep] = useState('불러오는 중...');
 
 	const [globalNewsletter, setGlobalNewsletter] = useState('');
 	const [studentNewsletters, setStudentNewsletters] = useState<Record<string, string>>({});
 
-	const load = useCallback(async () => {
+	const loadBatch = useCallback(async () => {
 		if (!batchId) return;
-		setLoading(true);
+		setBatchLoading(true);
+		setDataLoaded(false);
+		setMetricsResults([]);
+		setCrossValues(null);
 		try {
-			setLoadingStep('가정통신문 정보를 불러오는 중...');
 			const batchRes = await api.get(`/zindo/stats-batches/${batchId}/`);
 			const b: StatsBatch = batchRes.data;
 			setBatch(b);
 			setGlobalNewsletter(b.global_newsletter);
 			setStudentNewsletters(b.student_newsletters);
 
-			setLoadingStep(`전체 기록 및 학생 정보를 불러오는 중... (학생 ${b.student_ids.length}명)`);
-			const [allRecordsRes, ...studentDetailResults] = await Promise.all([
+			const studentResults = await Promise.all(
+				b.student_ids.map((id) => api.get(`/zindo/students/${id}/`)),
+			);
+			setStudents(studentResults.map((r) => r.data));
+		} catch (e) {
+			console.error(e);
+		} finally {
+			setBatchLoading(false);
+		}
+	}, [batchId]);
+
+	const loadData = useCallback(async () => {
+		if (!batch || dataLoading) return;
+		setDataLoading(true);
+		setDataLoaded(false);
+		setMetricsResults([]);
+		setCrossValues(null);
+		try {
+			const [allRecordsRes, ...studentRecordsResults] = await Promise.all([
 				api.get('/zindo/records/'),
-				...b.student_ids.map((id) => api.get(`/zindo/students/${id}/`)),
-			]);
-
-			const allRecords: LearningRecord[] = allRecordsRes.data;
-			const globalValidDays = getValidDays(allRecords);
-			setStudents(studentDetailResults.map((r) => r.data));
-
-			setLoadingStep(`학생별 학습 기록을 불러오는 중... (시간이 걸릴 수 있습니다)`);
-			const studentRecordsResults = await Promise.all(
-				b.student_ids.map((id) =>
+				...batch.student_ids.map((id) =>
 					api.get('/zindo/records/', { params: { sheet__student__id: id } }),
 				),
-			);
+			]);
 
-			setLoadingStep('통계를 계산하는 중...');
-			const results: StudentMetricsResult[] = b.student_ids.map((id, i) => {
+			const globalValidDays = getValidDays(allRecordsRes.data as LearningRecord[]);
+
+			const results: StudentMetricsResult[] = batch.student_ids.map((id, i) => {
 				const { sheetMetrics, studentMetrics } = computeStudentMetricsFromRecords(
 					studentRecordsResults[i].data,
 					globalValidDays,
-					b.start_date ?? '',
-					b.end_date ?? '',
+					batch.start_date ?? '',
+					batch.end_date ?? '',
 				);
-				return { studentId: id, sheetMetrics, studentMetrics, pieChartUrl: renderPieChartUrl(studentMetrics.subjectComposition) };
+				return {
+					studentId: id,
+					sheetMetrics,
+					studentMetrics,
+					pieChartUrl: renderPieChartUrl(studentMetrics.subjectComposition),
+				};
 			});
 			setMetricsResults(results);
 
@@ -76,28 +100,22 @@ export default function StatsBatchDetail() {
 				ap: allSM.filter((m) => m.ap !== null).map((m) => m.ap as number),
 				dr: allSM.map((m) => m.dr),
 			});
+			setDataLoaded(true);
 		} catch (e) {
 			console.error(e);
 		} finally {
-			setLoading(false);
+			setDataLoading(false);
 		}
-	}, [batchId]);
+	}, [batch, dataLoading]);
 
-	useEffect(() => { load(); }, [load]);
+	useEffect(() => { loadBatch(); }, [loadBatch]);
 
-	if (loading) {
+	if (batchLoading) {
 		return (
 			<div className="pt-16 pb-8">
 				<TopBar title="가정통신문" />
-				<div className="flex flex-col items-center justify-center min-h-[60vh] p-8 gap-5 text-center">
-					<div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-					<div className="space-y-1">
-						<p className="font-semibold">통계를 불러오는 중입니다</p>
-						<p className="text-sm text-muted-foreground">{loadingStep}</p>
-					</div>
-					<p className="text-xs text-muted-foreground max-w-[260px]">
-						학생 수가 많을수록 시간이 걸릴 수 있습니다. 잠시만 기다려 주세요.
-					</p>
+				<div className="flex items-center justify-center min-h-[40vh]">
+					<div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
 				</div>
 			</div>
 		);
@@ -110,11 +128,14 @@ export default function StatsBatchDetail() {
 		students,
 		metricsResults,
 		crossValues,
+		dataLoaded,
+		dataLoading,
+		loadData,
 		globalNewsletter,
 		setGlobalNewsletter,
 		studentNewsletters,
 		setStudentNewsletters,
-		reload: load,
+		reload: loadBatch,
 	};
 
 	return (

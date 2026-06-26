@@ -41,6 +41,9 @@ export interface BatchContext {
 	students: Student[];
 	metricsResults: StudentMetricsResult[];
 	crossValues: CrossStudentValues | null;
+	dataLoaded: boolean;
+	dataLoading: boolean;
+	loadData: () => Promise<void>;
 	globalNewsletter: string;
 	setGlobalNewsletter: (v: string) => void;
 	studentNewsletters: Record<string, string>;

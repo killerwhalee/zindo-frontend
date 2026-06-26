@@ -32,11 +32,11 @@ export default function StatsBatchList() {
 
 	return (
 		<div className="pt-16 pb-8">
-			<TopBar title="단체 가정통신문" />
+			<TopBar title="통계 모음" />
 
 			<div className="p-4 space-y-4">
 				<div className="flex items-center justify-between">
-					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">가정통신문</h3>
+					<h3 className="scroll-m-20 text-2xl font-semibold tracking-tight">통계 모음</h3>
 					<Button size="sm" onClick={() => navigate('/stats/batch/new')}>
 						<PlusIcon className="size-4 mr-1" />
 						새로 만들기
@@ -79,12 +79,6 @@ export default function StatsBatchList() {
 						))}
 					</div>
 				)}
-
-				<div className="pt-4 border-t text-center">
-					<Button variant="ghost" size="sm" onClick={() => navigate('/stats')}>
-						개인 통계 조회 →
-					</Button>
-				</div>
 			</div>
 		</div>
 	)
