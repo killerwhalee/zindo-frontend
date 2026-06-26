@@ -28,6 +28,7 @@ export default function StatsBatchEdit() {
 	const today = new Date();
 
 	const [allStudents, setAllStudents] = useState<Student[]>([]);
+	const [title, setTitle] = useState(batch.title);
 	const [start, setStart] = useState(batch.start_date ?? '');
 	const [end, setEnd] = useState(batch.end_date ?? '');
 	const [ids, setIds] = useState<Set<number>>(new Set(batch.student_ids));
@@ -73,6 +74,7 @@ export default function StatsBatchEdit() {
 		setSaving(true);
 		try {
 			await api.patch(`/zindo/stats-batches/${batch.id}/`, {
+				title: title.trim() || batch.title,
 				start_date: start || null,
 				end_date: end || null,
 				student_ids: [...ids],
@@ -102,6 +104,17 @@ export default function StatsBatchEdit() {
 			<TopBar title="설정 변경" />
 
 			<div className="p-4 space-y-6">
+				{/* Title */}
+				<div className="space-y-2">
+					<Label htmlFor="batch-title">제목</Label>
+					<Input
+						id="batch-title"
+						value={title}
+						onChange={(e) => setTitle(e.target.value)}
+						placeholder="가정통신문 제목"
+					/>
+				</div>
+
 				{/* Date range */}
 				<div className="space-y-2">
 					<Label>기간</Label>
